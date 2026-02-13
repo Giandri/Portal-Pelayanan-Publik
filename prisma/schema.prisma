@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Permit {
+  id              String          @id @default(cuid())
+  trackingId      String          @unique
+  type            String
+  name            String
+  email           String
+  phone           String
+  agencyName      String?
+  agencyCategory  String?
+  subject         String
+  description     String
+  status          String          @default("PENDING")
+  rejectionReason String?
+  date            DateTime
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  history         StatusHistory[]
+  attachments     Json?
+  survey          Survey?
+}
+
+model Survey {
+  id        String   @id @default(cuid())
+  rating    Int
+  comment   String?
+  permitId  String   @unique
+  permit    Permit   @relation(fields: [permitId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model StatusHistory {
+  id        String   @id @default(cuid())
+  status    String
+  note      String?
+  permitId  String
+  permit    Permit   @relation(fields: [permitId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  createdBy String?
+}
