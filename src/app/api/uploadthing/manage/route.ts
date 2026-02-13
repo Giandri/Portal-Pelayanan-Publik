@@ -23,9 +23,9 @@ export async function GET() {
         // Create a map of fileUrl -> Permit Info
         const fileMap = new Map();
 
-        permits.forEach(permit => {
+        permits.forEach((permit: any) => {
             if (Array.isArray(permit.attachments)) {
-                (permit.attachments as any[]).forEach(att => {
+                (permit.attachments as any[]).forEach((att: any) => {
                     // Extract key from URL or use stored key if available
                     // UT URL format: https://utfs.io/f/KEY
                     const key = att.key || att.url.split('/').pop();
@@ -39,7 +39,7 @@ export async function GET() {
             }
         });
 
-        const files = filesResponse.files.map((file) => {
+        const files = filesResponse.files.map((file: any) => {
             const permitInfo = fileMap.get(file.key);
             return {
                 ...file,

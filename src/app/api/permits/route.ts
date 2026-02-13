@@ -89,7 +89,7 @@ export async function POST(request: Request) {
             console.log("Sending email notification to:", email);
 
             // Find readable permit type title
-            const permitTypeInfo = permitTypes.find(t => t.slug === type);
+            const permitTypeInfo = permitTypes.find((t: any) => t.slug === type);
             const readableType = permitTypeInfo ? permitTypeInfo.title : (type || "Permohonan Izin");
 
             sendPermitEmail({

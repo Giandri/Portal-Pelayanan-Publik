@@ -50,7 +50,7 @@ export async function GET(
             status: permit.status as PermitStatus,
             createdAt: permit.createdAt,
             updatedAt: permit.updatedAt,
-            statusHistory: permit.history.map((h) => ({
+            statusHistory: permit.history.map((h: any) => ({
                 status: h.status as PermitStatus,
                 date: h.createdAt instanceof Date ? h.createdAt.toISOString() : new Date(h.createdAt).toISOString(),
                 note: h.note || undefined,
