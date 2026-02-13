@@ -20,7 +20,7 @@ export async function getSurveys() {
             }
         });
 
-        return surveys.map(survey => ({
+        return surveys.map((survey: any) => ({
             id: survey.id,
             rating: survey.rating,
             comment: survey.comment,
