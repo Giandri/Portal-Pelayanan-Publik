@@ -56,16 +56,16 @@ export const processSteps = [
     {
         id: "diajukan",
         label: "Pengajuan",
-        description: "Permohonan masuk dan didaftarkan",
+        description: "Permohonan anda berhasil diajukan.",
     },
     {
         id: "proses",
         label: "Pemrosesan",
-        description: "Data dan dokumen diproses",
+        description: "Permohonan anda sedang diperiksa dan dilakuakn proses verifikasi.",
     },
     {
         id: "disetujui",
         label: "Persetujuan",
-        description: "Keputusan akhir diterbitkan",
+        description: "Permohonan anda telah disetujui. Jangan lupa memberikan penilaian untuk meningkatkan kualitas layanan kami.   ",
     },
 ];

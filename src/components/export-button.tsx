@@ -161,7 +161,6 @@ export function ExportButton({ dateRange, permits }: ExportButtonProps) {
                 const statusInfo = statusConfig[permit.status];
                 const typeInfo = permitTypes.find(t => t.slug === permit.type);
 
-                // Construct the full URL for the superlink
                 const linkUrl = `${window.location.origin}/lacak/${permit.trackingId}`;
 
                 const rowData = [

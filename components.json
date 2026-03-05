@@ -20,6 +20,9 @@
     "hooks": "@/hooks"
   },
   "registries": {
-    "@animate-ui": "https://animate-ui.com/r/{name}.json"
+    "@animate-ui": "https://animate-ui.com/r/{name}.json",
+    "@abui": "https://abui.io/r/{name}.json",
+    "@lucide-animated": "https://lucide-animated.com/r/{name}.json",
+    "@skiper-ui": "https://skiper-ui.com/registry/{name}.json"
   }
 }

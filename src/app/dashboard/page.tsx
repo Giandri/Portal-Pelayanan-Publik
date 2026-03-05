@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { ExportButton } from "@/components/export-button";
 import { DateRange } from "react-day-picker";
-
+import { Button } from "@/components/ui/button";
 import { permitTypes, statusConfig } from "@/lib/constants";
 import { type Permit, type PermitStatus } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
@@ -362,7 +362,7 @@ export default function DashboardClient() {
                                     className="pl-9 pr-4 py-2 text-sm bg-gray-50/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-200 focus:border-yellow-300 w-full sm:w-64 transition-all"
                                 />
                             </div>
-                            <button className="p-2 bg-gray-50/80 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">
+                            <button title="Filter" className="p-2 bg-gray-50/80 border border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">
                                 <Filter className="w-4 h-4 text-gray-500" />
                             </button>
                         </div>

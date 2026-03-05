@@ -25,6 +25,15 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
                     ref={ref}
                     type={type}
                     id={inputId}
+                    onClick={(e) => {
+                        if (["date", "time", "datetime-local", "month"].includes(type)) {
+                            try {
+                                e.currentTarget.showPicker();
+                            } catch (err) {
+                                console.error("Error showing picker:", err);
+                            }
+                        }
+                    }}
                     className={cn(
                         `w-full h-11 px-4 rounded-lg
             border border-[var(--border)] bg-white

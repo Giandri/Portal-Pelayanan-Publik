@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { Applicant } from "@/app/actions/applicants";
-
 const typeColors: Record<string, { bg: string; text: string }> = {
     "badan-usaha": { bg: "bg-amber-100", text: "text-amber-700" },
     "instansi-pemerintah": { bg: "bg-blue-100", text: "text-blue-700" },
@@ -233,7 +232,7 @@ export default function ProfilPage() {
                                         </span>
                                     </div>
                                 </div>
-                                <button className="p-1 rounded-lg hover:bg-white/20 transition-colors opacity-0 group-hover:opacity-100">
+                                <button title="Opsi lainnya" className="p-1 rounded-lg hover:bg-white/20 transition-colors opacity-0 group-hover:opacity-100">
                                     <MoreHorizontal className="w-4 h-4 text-gray-400" />
                                 </button>
                             </div>

@@ -28,6 +28,7 @@ export interface Permit {
     trackingId: string;
     type: string; // broadened from literal to string to match Prisma roughly or kept as string
     applicantName: string;
+    applicantNIK?: string;
     applicantEmail: string;
     applicantPhone: string;
     subject: string;

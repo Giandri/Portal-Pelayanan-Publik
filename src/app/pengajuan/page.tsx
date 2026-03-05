@@ -1,14 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { format } from "date-fns";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { FileText, Droplets, CloudRain, Send, CheckCircle, Building2, Landmark, User, GraduationCap, UserCheck, Map, Leaf, FilePlus, Upload } from "lucide-react";
+import { FileText, Droplets, CloudRain, Send, CheckCircle, Building2, Landmark, User, GraduationCap, UserCheck, Map, Leaf, FilePlus, Upload, Camera, ImageIcon, X, Paperclip, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useUploadThing } from "@/lib/uploadthing";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RichSelect } from "@/components/ui/rich-select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/kibo-ui/dropzone";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AgencyGridSelector } from "@/components/tracking/AgencyGridSelector";
@@ -33,12 +37,16 @@ export default function LayananPage() {
     const [agencyCategory, setAgencyCategory] = useState<string>("");
     const [attachmentType, setAttachmentType] = useState<string>("");
     const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+    const [ktpFile, setKtpFile] = useState<File | null>(null);
+    const [ktpPreview, setKtpPreview] = useState<string | null>(null);
+    const [suratFiles, setSuratFiles] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [trackingId, setTrackingId] = useState("");
 
     const [formData, setFormData] = useState({
         name: "",
+        nik: "",
         email: "",
         phone: "",
         subject: "",
@@ -46,6 +54,9 @@ export default function LayananPage() {
         date: "",
         agencyName: "",
     });
+
+    const { startUpload: uploadKtp, isUploading: isUploadingKtp } = useUploadThing("ktpUpload");
+    const { startUpload: uploadLampiran, isUploading: isUploadingLampiran } = useUploadThing("lampiranUpload");
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,11 +75,10 @@ export default function LayananPage() {
         toast.loading("Mengirim permohonan...", { id: "submit" });
 
         try {
+            // 1. Create permit
             const response = await fetch("/api/permits", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     ...formData,
                     type: selectedType,
@@ -83,6 +93,57 @@ export default function LayananPage() {
 
             const data = await response.json();
             const newTrackingId = data.trackingId;
+            const permitId = data.id;
+
+            // 2. Upload KTP via UploadThing
+            const allFiles: any[] = [];
+
+            if (ktpFile) {
+                toast.loading("Mengupload foto KTP...", { id: "submit" });
+                const ktpResult = await uploadKtp([ktpFile]);
+                if (ktpResult) {
+                    ktpResult.forEach(f => {
+                        allFiles.push({
+                            name: f.name,
+                            url: f.url,
+                            size: f.size,
+                            type: f.type,
+                            key: f.key,
+                            category: "ktp",
+                        });
+                    });
+                }
+            }
+
+            // 3. Upload lampiran via UploadThing
+            if (suratFiles.length > 0) {
+                toast.loading("Mengupload surat lampiran...", { id: "submit" });
+                const lampiranResult = await uploadLampiran(suratFiles);
+                if (lampiranResult) {
+                    lampiranResult.forEach(f => {
+                        allFiles.push({
+                            name: f.name,
+                            url: f.url,
+                            size: f.size,
+                            type: f.type,
+                            key: f.key,
+                            category: "lampiran",
+                        });
+                    });
+                }
+            }
+
+            // 4. Save file metadata to permit
+            if (allFiles.length > 0 && permitId) {
+                await fetch("/api/permits/upload", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        permitId,
+                        files: allFiles,
+                    }),
+                });
+            }
 
             setTrackingId(newTrackingId);
             setIsSuccess(true);
@@ -174,12 +235,12 @@ export default function LayananPage() {
                 {/* Header */}
                 <Navbar />
 
-                <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+                <form onSubmit={handleSubmit} className="space-y-6 mt-10">
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-lg">Formulir Pengajuan</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-4 -mt-6">
 
                             {/* Permit Type Selection */}
                             <RichSelect
@@ -225,6 +286,19 @@ export default function LayananPage() {
                                         required
                                     />
                                 </div>
+
+
+
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">NIK</label>
+                                <Input
+                                    name="nik"
+                                    placeholder="NIK KTP"
+                                    value={formData.nik}
+                                    onChange={handleInputChange}
+                                    required
+                                />
                             </div>
 
                             {/* Agency Category Selection */}
@@ -300,40 +374,168 @@ export default function LayananPage() {
 
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700">Tanggal Pengajuan</label>
-                                <Input
-                                    name="date"
-                                    type="date"
-                                    value={formData.date}
-                                    onChange={handleInputChange}
-                                    required
+                                <DatePicker
+                                    date={formData.date ? new Date(formData.date) : undefined}
+                                    setDate={(date) => {
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            date: date ? format(date, "yyyy-MM-dd") : "",
+                                        }));
+                                    }}
                                 />
                             </div>
 
+                            {/* KTP Photo Upload */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">Foto KTP</label>
+                                {ktpPreview ? (
+                                    <div className="relative rounded-lg border-2 border-dashed border-green-300 bg-green-50 p-3">
+                                        <img
+                                            src={ktpPreview}
+                                            alt="Preview KTP"
+                                            className="w-full max-h-24 md:max-h-24 object-contain rounded-md"
+                                        />
+                                        <div className="flex items-center justify-between mt-1">
+                                            <p className="text-[10px] text-green-700 font-medium truncate flex-1">
+                                                {ktpFile?.name}
+                                            </p>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-5 w-5 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                onClick={() => {
+                                                    setKtpFile(null);
+                                                    setKtpPreview(null);
+                                                }}
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50/50 p-3">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                                                    <Camera className="w-4 h-4 text-blue-600" />
+                                                </div>
+                                                <p className="text-[10px] text-gray-500 font-medium max-w-[120px] leading-tight">
+                                                    Ambil foto atau pilih dari galeri
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-col gap-1.5 shrink-0">
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-7 text-[10px] px-2 gap-1"
+                                                    onClick={() => {
+                                                        const input = document.createElement('input');
+                                                        input.type = 'file';
+                                                        input.accept = 'image/*';
+                                                        input.capture = 'environment';
+                                                        input.onchange = (e) => {
+                                                            const file = (e.target as HTMLInputElement).files?.[0];
+                                                            if (file) {
+                                                                setKtpFile(file);
+                                                                setKtpPreview(URL.createObjectURL(file));
 
-                            {/* Attachment File Upload */}
-                            {attachmentType && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: "auto" }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className="space-y-2"
-                                >
-                                    <label className="text-sm font-medium text-gray-700">Upload Dokumen ({attachmentType === "lainnya" ? "Dokumen Lainnya" : "Dokumen Pendukung"})</label>
-                                    <Dropzone
-                                        onDrop={(acceptedFiles) => setAttachmentFiles(acceptedFiles)}
-                                        src={attachmentFiles}
-                                        maxFiles={1}
-                                        accept={{
-                                            'application/pdf': ['.pdf'],
-                                            'image/png': ['.png'],
-                                            'image/jpeg': ['.jpg', '.jpeg']
-                                        }}
-                                    >
-                                        <DropzoneEmptyState />
-                                        <DropzoneContent />
-                                    </Dropzone>
-                                </motion.div>
-                            )}
+                                                            }
+                                                        };
+                                                        input.click();
+                                                    }}
+                                                >
+                                                    <Camera className="w-3 h-3" />
+                                                    Kamera
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-7 text-[10px] px-2 gap-1"
+                                                    onClick={() => {
+                                                        const input = document.createElement('input');
+                                                        input.type = 'file';
+                                                        input.accept = 'image/*';
+                                                        input.onchange = (e) => {
+                                                            const file = (e.target as HTMLInputElement).files?.[0];
+                                                            if (file) {
+                                                                setKtpFile(file);
+                                                                setKtpPreview(URL.createObjectURL(file));
+
+                                                            }
+                                                        };
+                                                        input.click();
+                                                    }}
+                                                >
+                                                    <ImageIcon className="w-3 h-3" />
+                                                    Galeri
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-sm font-medium text-gray-700">Surat Lampiran</label>
+                                <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50/50 p-3">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                                                <Paperclip className="w-4 h-4 text-orange-600" />
+                                            </div>
+                                            <p className="text-[10px] text-gray-500 font-medium max-w-[120px] leading-tight">
+                                                {suratFiles.length > 0
+                                                    ? `${suratFiles.length} file terpilih`
+                                                    : "Format: PDF, DOC, DOCX (Maks 5)"}
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-col gap-1.5 shrink-0">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-7 text-[10px] px-2 gap-1"
+                                                onClick={() => {
+                                                    const input = document.createElement('input');
+                                                    input.type = 'file';
+                                                    input.multiple = true;
+                                                    input.accept = 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                                                    input.onchange = (e) => {
+                                                        const files = Array.from((e.target as HTMLInputElement).files || []);
+                                                        if (files.length > 5) {
+                                                            toast.error("Maksimal 5 file lampiran");
+                                                            setSuratFiles(files.slice(0, 5));
+                                                        } else {
+                                                            setSuratFiles(files);
+                                                        }
+                                                    };
+                                                    input.click();
+                                                }}
+                                            >
+                                                <FilePlus className="w-3 h-3" />
+                                                Pilih File
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {/* Preview List for Lampiran (Inline to save space) */}
+                                    {suratFiles.length > 0 && (
+                                        <div className="mt-2 space-y-1">
+                                            {suratFiles.map((file, i) => (
+                                                <div key={i} className="flex flex-row justify-between items-center text-[10px] text-gray-600 bg-white border border-gray-100 p-1.5 rounded pr-2">
+                                                    <div className="truncate flex-1 max-w-[90%]">{file.name}</div>
+                                                    <X className="w-3 h-3 text-red-500 cursor-pointer ml-2" onClick={() => {
+                                                        setSuratFiles(prev => prev.filter((_, idx) => idx !== i));
+                                                    }} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
 
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700">Deskripsi</label>

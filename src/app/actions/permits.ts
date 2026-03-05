@@ -33,6 +33,7 @@ export async function getPermits(options: { summary?: boolean } = {}): Promise<P
                     trackingId: permit.trackingId,
                     type: permit.type,
                     applicantName: permit.name,
+                    applicantNIK: permit.nik,
                     applicantEmail: permit.email,
                     applicantPhone: permit.phone,
                     subject: permit.subject,

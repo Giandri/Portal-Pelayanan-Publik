@@ -13,17 +13,22 @@ interface Slide {
 
 const slides: Slide[] = [
     {
-        image: "/images/img-1.png",
+        image: "/images/bg/bg-1.jpeg",
         title: "Bendung Panti Rao",
         description: "Bendung Irigasi Panti Rao, Kabupaten Pasaman, Luas Sawah Irigasi 8300 Ha",
     },
     {
-        image: "/images/img-2.png",
+        image: "/images/bg/bg-2.png",
+        title: "Bendung Panti Rao",
+        description: "Bendung Irigasi Panti Rao, Kabupaten Pasaman, Luas Sawah Irigasi 8300 Ha",
+    },
+    {
+        image: "/images/bg/bg-3.png",
         title: "Waduk Pembangunan",
         description: "Infrastruktur pengelolaan sumber daya air untuk kesejahteraan masyarakat",
     },
     {
-        image: "/images/img-3.png",
+        image: "/images/bg/bg-4.png",
         title: "Sistem Irigasi Modern",
         description: "Mendukung ketahanan pangan nasional melalui pengelolaan air berkelanjutan",
     },
@@ -114,7 +119,7 @@ export function HeroCarousel() {
                     </div>
 
                     {/* Gradient Overlay - Bottom Only */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/40 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-white via-white/50 to-transparent" />
                 </motion.div>
             </AnimatePresence>
 
@@ -125,7 +130,7 @@ export function HeroCarousel() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="inline-flex items-center gap-4 px-2 py-1 rounded-full bg-yellow-300/40  text-white text-sm font-medium mb-3"
+                        className="inline-flex items-center gap-4 px-2 py-1 rounded-full bg-yellow-300/40 text-white text-sm font-medium mb-3 drop-shadow-lg"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />
@@ -136,15 +141,15 @@ export function HeroCarousel() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.3 }}
-                        className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4"
+                        className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]"
                     >
-                        Portal <span className="text-yellow-400">Pengajuan</span>
+                        Portal <span className="text-yellow-400">Pelayanan Publik</span>
                     </motion.h1>
                     <motion.p
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5 }}
-                        className="text-lg md:text-xl text-white max-w-2xl mx-auto"
+                        className="text-lg md:text-xl text-white max-w-2xl mx-auto drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
                     >
                         Sistem Informasi Pelayanan Publik Terpadu untuk Pengelolaan Sumber Daya Air
                     </motion.p>

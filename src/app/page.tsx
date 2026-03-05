@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
+
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { HeroCarousel } from "@/components/home/hero-carousel";
@@ -9,18 +8,24 @@ import { IntroductionSection } from "@/components/home/introduction-section";
 import { FeaturesSection } from "@/components/home/features-section";
 import { ActionsSection } from "@/components/home/actions-section";
 import { TestimonialsSection } from "@/components/home/testimonials-section";
+import { FloatingContact } from "@/components/layout/floating-contact";
 
 
-export default function Home() {
+export default function HomePage() {
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900">
       <Navbar />
       <HeroCarousel />
+
+      {/* Floating Navigation Dock (Desktop & Mobile) */}
+
+
       <IntroductionSection />
       <FeaturesSection />
       <ActionsSection />
 
-      {/* Shared Background Wrapper for Testimonials & Footer */}
+
+
       <div className="relative overflow-hidden">
         <div
           className="absolute inset-0 z-0 bg-fixed bg-cover bg-center"
@@ -33,6 +38,8 @@ export default function Home() {
           <Footer />
         </div>
       </div>
+
+      <FloatingContact />
     </div>
   );
 }

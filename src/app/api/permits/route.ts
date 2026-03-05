@@ -27,6 +27,7 @@ export async function POST(request: Request) {
 
         const {
             name,
+            nik,
             email,
             phone,
             agencyName,
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
                 trackingId,
                 type,
                 name,
+                nik,
                 email,
                 phone,
                 agencyName,
@@ -79,7 +81,7 @@ export async function POST(request: Request) {
                         note: "Permohonan baru diajukan",
                     },
                 },
-            },
+            } as any,
         });
 
         console.log("POST_API: Permit created with trackingId:", permit.trackingId);

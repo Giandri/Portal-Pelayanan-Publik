@@ -9,6 +9,7 @@ export async function POST(request: Request) {
         const formData = await request.formData();
         const file = formData.get("file") as File;
         const permitId = formData.get("permitId") as string;
+        const category = (formData.get("category") as string) || "output";
 
         if (!file || !permitId) {
             return NextResponse.json(
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
             url: `/uploads/${filename}`,
             size: file.size,
             type: file.type,
-            category: "output", // Admin output/result
+            category, // ktp, lampiran, or output
             permitId: permitId,
             createdAt: new Date().toISOString(),
             status: 'done', // Add status field for frontend compatibility
@@ -114,7 +115,7 @@ export async function PUT(request: Request) {
             size: file.size,
             type: file.type,
             key: file.key,
-            category: "output", // Admin output/result
+            category: file.category || "output", // ktp, lampiran, or output
             permitId: permitId,
             createdAt: new Date().toISOString(),
             status: 'done',

@@ -2,7 +2,6 @@
 
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
 import { getPublicSurveys } from "@/app/actions/surveys";
@@ -37,7 +36,7 @@ export function TestimonialsSection() {
         : [...testimonials, ...testimonials]; // Double if enough items
 
     return (
-        <section className="py-20 overflow-hidden">
+        <section className="py-10 overflow-hidden">
             <div className="container mx-auto px-4 text-center mb-12">
                 <motion.span
                     initial={{ opacity: 0, y: 20 }}
@@ -50,26 +49,30 @@ export function TestimonialsSection() {
                     </svg>
                     Survei
                 </motion.span>
-                <p className="max-w-3xl mx-auto text-gray-800 font-medium">
+                <p className="max-w-3xl mx-auto md:text-lg text-sm text-gray-800 font-medium">
                     Beberapa hasil tingkat kepuasan masyarakat serta mitra kerja dalam menggunakan layanan publik Balai Wilayah Sungai Bangka Belitung.
                 </p>
             </div>
 
             {/* Marquee Container */}
             <div className="relative w-full overflow-hidden">
-                <div className="flex w-max gap-6 animate-marquee hover:pause">
-                    <motion.div
-                        className="flex gap-6"
-                        animate={{ x: "-100%" }}
-                        transition={{
-                            duration: Math.max(30, testimonials.length * 5), // Adjust speed based on content length
-                            repeat: Infinity,
-                            ease: "linear",
-                        }}
-                    >
+                {/* Fade edges */}
+                <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-r from-white to-transparent" />
+                <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-16 z-10 bg-gradient-to-l from-white to-transparent" />
+
+                <div
+                    className="flex w-max"
+                    style={{
+                        "--duration": `${Math.max(30, displayTestimonials.length * 4)}s`,
+                        "--gap": "1.5rem",
+                        gap: "var(--gap)",
+                    } as React.CSSProperties}
+                >
+                    {/* First row */}
+                    <div className="flex shrink-0 animate-marquee" style={{ gap: "var(--gap)" } as React.CSSProperties}>
                         {displayTestimonials.map((item, idx) => (
                             <div
-                                key={`${idx}-${item.name}`}
+                                key={`a-${idx}-${item.id}`}
                                 className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 text-left hover:shadow-xl transition-shadow duration-300 relative border border-white/50 w-[300px] md:w-[400px] shrink-0"
                             >
                                 <div className="flex justify-between items-start mb-4">
@@ -91,23 +94,17 @@ export function TestimonialsSection() {
                                     </div>
                                 </div>
                                 <p className="text-gray-600 text-sm leading-relaxed line-clamp-4">
-                                    "{item.text}"
+                                    &ldquo;{item.text}&rdquo;
                                 </p>
                             </div>
                         ))}
-                    </motion.div>
-                    <motion.div
-                        className="flex gap-6"
-                        animate={{ x: "-100%" }}
-                        transition={{
-                            duration: Math.max(30, testimonials.length * 5),
-                            repeat: Infinity,
-                            ease: "linear",
-                        }}
-                    >
+                    </div>
+
+                    {/* Duplicate row for seamless loop */}
+                    <div className="flex shrink-0 animate-marquee" style={{ gap: "var(--gap)" } as React.CSSProperties} aria-hidden="true">
                         {displayTestimonials.map((item, idx) => (
                             <div
-                                key={`clone-${idx}-${item.name}`}
+                                key={`b-${idx}-${item.id}`}
                                 className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 text-left hover:shadow-xl transition-shadow duration-300 relative border border-white/50 w-[300px] md:w-[400px] shrink-0"
                             >
                                 <div className="flex justify-between items-start mb-4">
@@ -129,11 +126,11 @@ export function TestimonialsSection() {
                                     </div>
                                 </div>
                                 <p className="text-gray-600 text-sm leading-relaxed line-clamp-4">
-                                    "{item.text}"
+                                    &ldquo;{item.text}&rdquo;
                                 </p>
                             </div>
                         ))}
-                    </motion.div>
+                    </div>
                 </div>
             </div>
         </section>

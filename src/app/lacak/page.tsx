@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Search, FileSearch } from "lucide-react";
@@ -8,11 +8,21 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { FloatingContact } from "@/components/layout/floating-contact";
 
 export default function LacakPage() {
     const [trackingId, setTrackingId] = useState("");
     const [error, setError] = useState("");
+    const [isMobile, setIsMobile] = useState(false);
     const router = useRouter();
+
+    useEffect(() => {
+        const mq = window.matchMedia("(max-width: 640px)");
+        setIsMobile(mq.matches);
+        const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+        mq.addEventListener("change", handler);
+        return () => mq.removeEventListener("change", handler);
+    }, []);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -81,7 +91,7 @@ export default function LacakPage() {
                                                         setTrackingId(e.target.value.toUpperCase());
                                                         setError("");
                                                     }}
-                                                    placeholder="Contoh: BWS-YYYYMMDD-xxx"
+                                                    placeholder={isMobile ? "BWS-YYYYMMDD-xxx" : "Contoh: BWS-YYYYMMDD-xxx"}
                                                     className={`w-full h-12 md:h-14 pl-10 md:pl-12 pr-4 rounded-xl border text-base md:text-lg font-mono
                             bg-white text-[var(--text-primary)] placeholder:text-[var(--text-muted)]
                             transition-colors focus:outline-none focus:ring-2
@@ -126,6 +136,7 @@ export default function LacakPage() {
                             </ul>
                         </div>
                     </motion.div>
+                    <FloatingContact />
                 </div>
             </div>
 

@@ -1,11 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Search, FileText, Home } from "lucide-react";
 import Image from "next/image";
+import { Dock, DockLink } from "@/components/dock";
 
 export function IntroductionSection() {
     return (
-        <section className="py-20 bg-white relative overflow-hidden">
+        <section className="py-6 bg-white relative overflow-hidden">
             {/* Parallax Background */}
             <div
                 className="absolute inset-0 z-0 bg-fixed bg-cover bg-center opacity-30"
@@ -13,6 +15,25 @@ export function IntroductionSection() {
             />
 
             <div className="container mx-auto px-4 relative z-10">
+                <div className="flex justify-center mb-4 ">
+                    <Dock>
+                        <DockLink
+                            href="/"
+                            label="BERANDA"
+                            icon={<Home size={12} />}
+                        />
+                        <DockLink
+                            href="/pengajuan"
+                            label="PENGAJUAN"
+                            icon={<FileText size={12} />}
+                        />
+                        <DockLink
+                            href="/lacak"
+                            label="CEK STATUS"
+                            icon={<Search size={12} />}
+                        />
+                    </Dock>
+                </div>
                 <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
                     {/* Image Content */}
                     <motion.div
@@ -25,7 +46,7 @@ export function IntroductionSection() {
                         <div className="relative w-64 h-64 md:w-72 md:h-72">
                             <div className="w-full h-full overflow-hidden shadow-2xl relative rounded-[2.5rem]">
                                 <Image
-                                    src="/images/img-3.png"
+                                    src="/images/bg/bg-3.png"
                                     alt="Pembangunan Bendungan"
                                     fill
                                     className="object-cover"

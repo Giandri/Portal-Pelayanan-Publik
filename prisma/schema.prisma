@@ -11,6 +11,7 @@ model Permit {
   trackingId      String          @unique
   type            String
   name            String
+  nik             String?
   email           String
   phone           String
   agencyName      String?

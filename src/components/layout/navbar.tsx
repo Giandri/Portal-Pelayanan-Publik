@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Link000, Link001, Link002, Link003, Link004, Link005 } from "../ui/skiper-ui/skiper40";
 
 import Marquee from "@/components/ui/marquee";
 
@@ -37,7 +38,7 @@ export function Navbar() {
         <header className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center gap-2">
 
             {/* Running Text / Marquee */}
-            <div className="w-full bg-yellow-500/90 backdrop-blur-sm text-blue-950 text-[9px] font-bold py-[2px] shadow-sm border-b border-yellow-600/20">
+            <div className="w-full bg-yellow-500/90 backdrop-blur-sm text-blue-950 text-[12px] font-bold py-[1px] shadow-sm border-b border-yellow-600/20">
                 <Marquee pauseOnHover className="[--duration:40s] [--gap:1.5rem]">
                     <span className="mx-2">Selamat Datang di Website Resmi Balai Wilayah Sungai Bangka Belitung</span>
                     <span className="mx-2">●</span>
@@ -85,41 +86,26 @@ export function Navbar() {
 
                     {/* Desktop Navigation */}
                     <div className="hidden md:flex items-center gap-2">
-                        <Link
+                        <Link005
                             href="/"
-                            className={cn(
-                                "px-4 py-1.5 text-sm font-medium transition-colors",
-                                pathname === "/"
-                                    ? "text-gray-800"
-                                    : "text-gray-500 hover:text-gray-800"
-                            )}
+                            className="w-fit text-sm font-medium text-gray-500 hover:text-black transition-colors"
                         >
                             BERANDA
-                        </Link>
+                        </Link005>
 
-                        <Link
+                        <Link005
                             href="/pengajuan"
-                            className={cn(
-                                "px-4 py-1.5 text-sm font-medium transition-colors",
-                                isActive("/layanan")
-                                    ? "text-gray-800"
-                                    : "text-gray-500 hover:text-gray-800"
-                            )}
+                            className="w-fit text-sm font-medium text-gray-500 hover:text-black transition-colors"
                         >
                             PENGAJUAN
-                        </Link>
+                        </Link005>
 
-                        <Link
+                        <Link005
                             href="/lacak"
-                            className={cn(
-                                "px-4 py-1.5 text-sm font-medium transition-colors",
-                                isActive("/lacak")
-                                    ? "text-gray-800"
-                                    : "text-gray-500 hover:text-gray-800"
-                            )}
+                            className="w-fit text-sm font-medium text-gray-500 hover:text-black transition-colors"
                         >
                             CEK STATUS
-                        </Link>
+                        </Link005>
                     </div>
 
                     {/* Mobile Menu Button */}

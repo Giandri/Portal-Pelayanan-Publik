@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     DndContext,
     DragOverlay,
@@ -37,6 +38,9 @@ import {
     Paperclip,
     History,
     AlertTriangle,
+    Search,
+    UserCheck,
+    FilePlus,
 } from "lucide-react";
 import { UploadDropzone } from "@/lib/uploadthing";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -101,8 +105,10 @@ function SortablePermitCard({ permit, onClick, isActive }: SortablePermitCardPro
             ref={setNodeRef}
             style={style}
             onClick={onClick}
+            {...attributes}
+            {...listeners}
             className={cn(
-                "cursor-grab group hover:shadow-md transition-all border-l-4",
+                "cursor-grab active:cursor-grabbing group hover:shadow-md transition-all border-l-4",
                 isDragging ? "opacity-30" : "opacity-100",
                 isActive ? "ring-2 ring-primary border-l-primary" : "border-l-transparent",
                 "bg-card"
@@ -126,11 +132,7 @@ function SortablePermitCard({ permit, onClick, isActive }: SortablePermitCardPro
                             </p>
                         </div>
                     </div>
-                    <div
-                        {...attributes}
-                        {...listeners}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded"
-                    >
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded">
                         <GripVertical className="w-4 h-4 text-muted-foreground" />
                     </div>
                 </div>
@@ -160,6 +162,10 @@ interface KanbanColumnProps {
 
 function KanbanColumn({ id, permits, activePermitId, onPermitClick }: KanbanColumnProps) {
     const config = statusConfig[id];
+    const [isExpanded, setIsExpanded] = useState(false);
+    const STACK_THRESHOLD = 2;
+    const hasOverflow = permits.length > STACK_THRESHOLD;
+    const hiddenCount = permits.length - STACK_THRESHOLD;
 
     const { setNodeRef } = useSortable({
         id: id,
@@ -191,7 +197,7 @@ function KanbanColumn({ id, permits, activePermitId, onPermitClick }: KanbanColu
             <div className="flex-1 p-2 overflow-y-auto min-h-[150px]">
                 <SortableContext items={permitIds} strategy={verticalListSortingStrategy}>
                     <div className="space-y-2">
-                        {permits.map((permit) => (
+                        {permits.slice(0, STACK_THRESHOLD).map((permit) => (
                             <SortablePermitCard
                                 key={permit.id}
                                 permit={permit}
@@ -199,12 +205,77 @@ function KanbanColumn({ id, permits, activePermitId, onPermitClick }: KanbanColu
                                 onClick={() => onPermitClick(permit.id)}
                             />
                         ))}
+
+                        <AnimatePresence initial={false}>
+                            {isExpanded && hasOverflow && permits.slice(STACK_THRESHOLD).map((permit) => (
+                                <motion.div
+                                    key={permit.id}
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="pt-2">
+                                        <SortablePermitCard
+                                            permit={permit}
+                                            isActive={activePermitId === permit.id}
+                                            onClick={() => onPermitClick(permit.id)}
+                                        />
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
                     </div>
+
+                    {/* Stacked card edges below (iOS notification style) */}
+                    <AnimatePresence>
+                        {hasOverflow && !isExpanded && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -5 }}
+                                transition={{ duration: 0.2 }}
+                                className="cursor-pointer group"
+                                onClick={() => setIsExpanded(true)}
+                            >
+                                <div className="h-[10px] bg-card rounded-b-xl border-x border-b border-border/80 mx-2 -mt-px shadow-[0_2px_4px_rgba(0,0,0,0.06)]" />
+                                {hiddenCount >= 2 && (
+                                    <div className="h-[10px] bg-card/90 rounded-b-xl border-x border-b border-border/60 mx-4 shadow-[0_2px_4px_rgba(0,0,0,0.04)]" />
+                                )}
+                                {hiddenCount >= 3 && (
+                                    <div className="h-[8px] bg-card/70 rounded-b-xl border-x border-b border-border/40 mx-6" />
+                                )}
+                                <p className="text-[11px] text-muted-foreground text-center mt-3 group-hover:text-primary transition-colors">
+                                    {hiddenCount} permohonan lainnya
+                                </p>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Collapse button */}
+                    <AnimatePresence>
+                        {hasOverflow && isExpanded && (
+                            <motion.button
+                                initial={{ opacity: 0, y: 5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 5 }}
+                                transition={{ duration: 0.2 }}
+                                onClick={() => setIsExpanded(false)}
+                                className="w-full mt-2 bg-muted/50 border border-border/50 rounded-md p-2 text-center cursor-pointer hover:bg-muted transition-colors"
+                            >
+                                <span className="text-xs font-medium text-muted-foreground">
+                                    Tumpuk kembali
+                                </span>
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
                 </SortableContext>
             </div>
         </div>
     );
 }
+
 
 // --- Main Page Component ---
 
@@ -221,6 +292,7 @@ export default function PermitDashboard() {
     const [permits, setPermits] = useState<Permit[]>([]);
     const [activeDragId, setActiveDragId] = useState<string | null>(null);
     const [selectedPermitId, setSelectedPermitId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
     // Rejection Dialog State
     const [isRejectOpen, setIsRejectOpen] = useState(false);
@@ -243,11 +315,20 @@ export default function PermitDashboard() {
 
     const columns = useMemo(() => {
         const cols: Record<string, Permit[]> = {};
+        const q = searchQuery.toLowerCase();
+        const filtered = q
+            ? permits.filter(p =>
+                p.applicantName.toLowerCase().includes(q) ||
+                p.subject?.toLowerCase().includes(q) ||
+                p.trackingId?.toLowerCase().includes(q) ||
+                p.type?.toLowerCase().includes(q)
+            )
+            : permits;
         statusFlow.forEach(status => {
-            cols[status] = permits.filter(p => p.status === status);
+            cols[status] = filtered.filter(p => p.status === status);
         });
         return cols;
-    }, [permits]);
+    }, [permits, searchQuery]);
 
     const activePermit = useMemo(
         () => permits.find((p) => p.id === activeDragId),
@@ -269,63 +350,20 @@ export default function PermitDashboard() {
         return atts.filter(f => f.category !== 'output');
     }, [selectedPermit]);
 
+    const ktpFiles = useMemo(() => {
+        const atts = (selectedPermit?.attachments as any[]) || [];
+        return atts.filter(f => f.category === 'ktp');
+    }, [selectedPermit]);
+
+    const lampiranFiles = useMemo(() => {
+        const atts = (selectedPermit?.attachments as any[]) || [];
+        return atts.filter(f => f.category === 'lampiran');
+    }, [selectedPermit]);
+
     function onDragStart(event: DragStartEvent) {
         // ... (skip lines)
         // ...
-        <TabsContent value="files">
-            <div className="space-y-4">
-                {activeOutputFiles.length > 0 && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                        <h4 className="text-sm font-semibold text-green-800 mb-2 flex items-center gap-2">
-                            <CheckCircle2 className="w-4 h-4" /> Dokumen Output (Izin)
-                        </h4>
-                        <div className="space-y-2">
-                            {activeOutputFiles.map((file: any, i: number) => (
-                                <div key={i} className="flex items-center gap-3 p-2 bg-white rounded border border-green-100 shadow-sm">
-                                    <div className="w-8 h-8 bg-green-100 text-green-600 rounded flex items-center justify-center">
-                                        <FileText className="w-4 h-4" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium truncate">{file.name}</p>
-                                        <p className="text-xs text-muted-foreground">Output Izin</p>
-                                    </div>
-                                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => window.open(file.url, '_blank')}>
-                                        Lihat
-                                    </Button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
 
-                <div>
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Lampiran Pemohon</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {activeUserFiles.length > 0 ? (
-                            activeUserFiles.map((file: any, idx: number) => (
-                                <div key={file.key || idx} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors group cursor-pointer relative">
-                                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded flex items-center justify-center">
-                                        <Paperclip className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type?.split('/')[1] || 'doc'}
-                                        </p>
-                                    </div>
-                                    <a href={file.url} target="_blank" rel="noopener noreferrer" className="absolute inset-0" />
-                                </div>
-                            ))
-                        ) : (
-                            <div className="col-span-full py-8 text-center text-muted-foreground border-2 border-dashed rounded-lg">
-                                <Paperclip className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                <p>Tidak ada dokumen lampiran</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </TabsContent>
         setActiveDragId(event.active.id as string);
         if (event.active.data.current?.type === "Permit") {
             setSelectedPermitId(event.active.id as string);
@@ -498,9 +536,21 @@ export default function PermitDashboard() {
 
     return (
         <div className="h-full flex flex-col p-6 gap-6">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight">Papan Kelola Permohonan</h1>
-                <p className="text-muted-foreground">Kelola status dan alur permohonan izin.</p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Papan Kelola Permohonan</h1>
+                    <p className="text-muted-foreground">Kelola status dan alur permohonan izin.</p>
+                </div>
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                        type="text"
+                        placeholder="Cari nama, subjek, tracking ID..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-9 pr-4 py-2 w-72 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
+                    />
+                </div>
             </div>
 
             {/* Kanban Board */}
@@ -552,7 +602,7 @@ export default function PermitDashboard() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                         {/* Main Info */}
                         <Card className="lg:col-span-2 border-primary/20 shadow-md">
-                            <CardHeader className="bg-muted/30 pb-4">
+                            <CardHeader className="bg-muted/30">
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <CardTitle className="text-lg text-primary">{selectedPermit.subject}</CardTitle>
@@ -571,7 +621,7 @@ export default function PermitDashboard() {
                                     </Badge>
                                 </div>
                             </CardHeader>
-                            <CardContent className="p-6 pt-6">
+                            <CardContent className="p-2">
                                 <Tabs defaultValue="info" className="w-full">
                                     <TabsList className="mb-4">
                                         <TabsTrigger value="info">Informasi</TabsTrigger>
@@ -610,10 +660,14 @@ export default function PermitDashboard() {
                                         <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                                             <User className="w-4 h-4" /> Data Pemohon
                                         </h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                             <div className="bg-muted/30 p-3 rounded-lg">
                                                 <label className="text-xs text-muted-foreground">Nama Lengkap</label>
                                                 <p className="text-sm font-medium">{selectedPermit.applicantName}</p>
+                                            </div>
+                                            <div className="bg-muted/30 p-3 rounded-lg">
+                                                <label className="text-xs text-muted-foreground">NIK</label>
+                                                <p className="text-sm font-medium">{selectedPermit.applicantNIK || "-"}</p>
                                             </div>
                                             <div className="bg-muted/30 p-3 rounded-lg">
                                                 <label className="text-xs text-muted-foreground flex items-center gap-1">
@@ -688,6 +742,60 @@ export default function PermitDashboard() {
                                             </>
                                         )}
 
+                                        {ktpFiles.length > 0 && (
+                                            <>
+                                                <div className="border-t border-dashed my-4" />
+                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                                    <h4 className="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                                                        <UserCheck className="w-4 h-4" /> Foto KTP
+                                                    </h4>
+                                                    <div className="space-y-2">
+                                                        {ktpFiles.map((file: any, i: number) => (
+                                                            <div key={i} className="flex items-center gap-3 p-2 bg-white rounded border border-blue-100 shadow-sm">
+                                                                <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded flex items-center justify-center">
+                                                                    <FileText className="w-4 h-4" />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-medium truncate">{file.name}</p>
+                                                                    <p className="text-xs text-muted-foreground">KTP Pemohon</p>
+                                                                </div>
+                                                                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => window.open(file.url, '_blank')}>
+                                                                    Lihat
+                                                                </Button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {lampiranFiles.length > 0 && (
+                                            <>
+                                                <div className="border-t border-dashed my-4" />
+                                                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                                                    <h4 className="text-sm font-semibold text-orange-800 mb-2 flex items-center gap-2">
+                                                        <FilePlus className="w-4 h-4" /> Lampiran Pemohon
+                                                    </h4>
+                                                    <div className="space-y-2">
+                                                        {lampiranFiles.map((file: any, i: number) => (
+                                                            <div key={i} className="flex items-center gap-3 p-2 bg-white rounded border border-orange-100 shadow-sm">
+                                                                <div className="w-8 h-8 bg-orange-100 text-orange-600 rounded flex items-center justify-center">
+                                                                    <FileText className="w-4 h-4" />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-medium truncate">{file.name}</p>
+                                                                    <p className="text-xs text-muted-foreground">Dokumen Pendukung</p>
+                                                                </div>
+                                                                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => window.open(file.url, '_blank')}>
+                                                                    Lihat
+                                                                </Button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+
                                         {activeOutputFiles.length > 0 && (
                                             <>
                                                 <div className="border-t border-dashed my-4" />
@@ -740,35 +848,91 @@ export default function PermitDashboard() {
                                     </TabsContent>
 
                                     <TabsContent value="files">
-                                        <div className="space-y-4">
+                                        <div className="space-y-6">
+                                            {/* Output Documents (Official) */}
+                                            {activeOutputFiles.length > 0 && (
+                                                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                                    <h4 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
+                                                        <CheckCircle2 className="w-4 h-4" /> Dokumen Izin (Output)
+                                                    </h4>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        {activeOutputFiles.map((file: any, i: number) => (
+                                                            <div key={i} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-green-100 shadow-sm hover:shadow-md transition-shadow">
+                                                                <div className="w-10 h-10 bg-green-100 text-green-600 rounded flex items-center justify-center">
+                                                                    <FileText className="w-5 h-5" />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
+                                                                    <p className="text-xs text-muted-foreground">Resmi • Surat Izin</p>
+                                                                </div>
+                                                                <Button size="sm" variant="outline" onClick={() => window.open(file.url, '_blank')}>
+                                                                    Buka
+                                                                </Button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
 
-
-                                            <div>
-                                                <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Lampiran Pemohon</h4>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                    {activeUserFiles.length > 0 ? (
-                                                        activeUserFiles.map((file: any, idx: number) => (
-                                                            <div key={file.key || idx} className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors group cursor-pointer relative">
+                                            {/* KTP Section */}
+                                            {ktpFiles.length > 0 && (
+                                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                                    <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                                                        <UserCheck className="w-4 h-4" /> Identitas (KTP)
+                                                    </h4>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        {ktpFiles.map((file: any, i: number) => (
+                                                            <div key={i} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-100 shadow-sm hover:shadow-md transition-shadow">
                                                                 <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded flex items-center justify-center">
+                                                                    <UserCheck className="w-5 h-5" />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
+                                                                    <p className="text-xs text-muted-foreground">Lampiran • KTP</p>
+                                                                </div>
+                                                                <Button size="sm" variant="outline" onClick={() => window.open(file.url, '_blank')}>
+                                                                    Buka
+                                                                </Button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Applicant Attachments Section */}
+                                            {lampiranFiles.length > 0 && (
+                                                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                                                    <h4 className="text-sm font-semibold text-orange-800 mb-3 flex items-center gap-2">
+                                                        <FilePlus className="w-4 h-4" /> Lampiran Pendukung
+                                                    </h4>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                        {lampiranFiles.map((file: any, i: number) => (
+                                                            <div key={i} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-orange-100 shadow-sm hover:shadow-md transition-shadow">
+                                                                <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded flex items-center justify-center">
                                                                     <Paperclip className="w-5 h-5" />
                                                                 </div>
                                                                 <div className="flex-1 min-w-0">
                                                                     <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
                                                                     <p className="text-xs text-muted-foreground">
-                                                                        {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type?.split('/')[1] || 'doc'}
+                                                                        {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type?.split('/')[1] || 'DOC'}
                                                                     </p>
                                                                 </div>
-                                                                <a href={file.url} target="_blank" rel="noopener noreferrer" className="absolute inset-0" />
+                                                                <Button size="sm" variant="outline" onClick={() => window.open(file.url, '_blank')}>
+                                                                    Buka
+                                                                </Button>
                                                             </div>
-                                                        ))
-                                                    ) : (
-                                                        <div className="col-span-full py-8 text-center text-muted-foreground border-2 border-dashed rounded-lg">
-                                                            <Paperclip className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                                            <p>Tidak ada dokumen lampiran</p>
-                                                        </div>
-                                                    )}
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
+
+                                            {(!selectedPermit.attachments || (selectedPermit.attachments as any[]).length === 0) && (
+                                                <div className="py-12 text-center text-muted-foreground border-2 border-dashed rounded-lg">
+                                                    <Paperclip className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                                                    <p className="text-lg font-medium">Belum ada dokumen</p>
+                                                    <p className="text-sm">Dokumen yang diunggah pemohon atau admin akan muncul di sini.</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </TabsContent>
                                 </Tabs>

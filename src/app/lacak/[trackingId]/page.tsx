@@ -1,22 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
     CheckCircle2,
     Clock,
-    Search,
     FileText,
     User,
     Calendar,
     AlertCircle,
     ArrowLeft,
-    Check,
-    Package,
-    ShieldCheck,
-    Truck,
-    XCircle,
     ExternalLink,
     Download,
     Droplets,
@@ -25,6 +19,10 @@ import {
     MessageSquare,
     Send
 } from "lucide-react";
+import { IdCardIcon, type IdCardIconHandle } from "@/components/ui/id-card";
+import { FileCogIcon, type FileCogIconHandle } from "@/components/ui/file-cog";
+import { FileCheck2Icon, type FileCheck2IconHandle } from "@/components/ui/file-check-2";
+import { XIcon, type XIconHandle } from "@/components/ui/x";
 import { Rating, RatingButton } from "@/components/kibo-ui/rating";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -37,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { statusConfig, processSteps, permitTypes } from "@/lib/constants";
 import { Permit } from "@/lib/types";
 import { formatDate, cn } from "@/lib/utils";
+import { FloatingContact } from "@/components/layout/floating-contact";
 
 const iconMap: Record<string, any> = {
     FileText,
@@ -55,6 +54,12 @@ export default function LacakDetail() {
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState("");
     const [isSubmittingSurvey, setIsSubmittingSurvey] = useState(false);
+
+    // Icon animation refs
+    const idCardRef = useRef<IdCardIconHandle>(null);
+    const fileCogRef = useRef<FileCogIconHandle>(null);
+    const fileCheck2Ref = useRef<FileCheck2IconHandle>(null);
+    const xIconRef = useRef<XIconHandle>(null);
 
     const handleSubmitSurvey = async () => {
         if (rating === 0) {
@@ -124,13 +129,166 @@ export default function LacakDetail() {
         }
     }, [trackingId]);
 
+    // Trigger icon animations after data loads
+    useEffect(() => {
+        if (!permit) return;
+
+        const activeRefMap: Record<string, React.RefObject<any>> = {
+            diajukan: idCardRef,
+            proses: fileCogRef,
+            disetujui: fileCheck2Ref,
+            ditolak: xIconRef,
+        };
+        const activeRef = activeRefMap[permit.status];
+
+        // Delay to ensure refs are attached after render
+        const initTimer = setTimeout(() => {
+            idCardRef.current?.startAnimation();
+            fileCogRef.current?.startAnimation();
+            fileCheck2Ref.current?.startAnimation();
+            xIconRef.current?.startAnimation();
+        }, 500);
+
+        // Loop only the active step icon
+        const interval = setInterval(() => {
+            activeRef?.current?.startAnimation();
+        }, 1500);
+
+        return () => {
+            clearTimeout(initTimer);
+            clearInterval(interval);
+        };
+    }, [permit]);
+
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col">
-                <Navbar />
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <div className="min-h-screen pt-20 md:pt-24 pb-8 md:pb-12 relative">
+                <div className="fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/images/bg-1.png')" }} />
+                <div className="fixed inset-0 -z-10 bg-white/40" />
+
+                <div className="container mx-auto max-w-4xl px-4">
+                    <Navbar />
+
+                    <div className="mt-8">
+                        {/* Back link skeleton */}
+                        <div className="h-4 w-40 bg-gray-200 rounded animate-pulse mb-6" />
+
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            {/* Main Content Skeleton */}
+                            <div className="lg:col-span-2 space-y-6">
+                                {/* Permit Info Card Skeleton */}
+                                <Card>
+                                    <CardHeader className="border-b bg-muted/30">
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                            <div className="space-y-3">
+                                                <div className="h-5 w-32 bg-gray-200 rounded animate-pulse" />
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-lg bg-gray-200 animate-pulse" />
+                                                    <div className="h-6 w-48 bg-gray-200 rounded animate-pulse" />
+                                                </div>
+                                            </div>
+                                            <div className="h-8 w-24 bg-gray-200 rounded-full animate-pulse" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-6">
+                                        <div className="space-y-6">
+                                            <div>
+                                                <div className="h-4 w-40 bg-gray-200 rounded animate-pulse mb-3" />
+                                                <div className="h-5 w-full bg-gray-100 rounded animate-pulse mb-2" />
+                                                <div className="space-y-2">
+                                                    <div className="h-4 w-full bg-gray-100 rounded animate-pulse" />
+                                                    <div className="h-4 w-3/4 bg-gray-100 rounded animate-pulse" />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div className="space-y-2">
+                                                    <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
+                                                        <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <div className="h-3 w-20 bg-gray-200 rounded animate-pulse" />
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
+                                                        <div className="h-4 w-28 bg-gray-200 rounded animate-pulse" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Timeline Card Skeleton */}
+                                <Card className="overflow-hidden border-none shadow-sm ring-1 ring-gray-100">
+                                    <CardHeader className="bg-white pb-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-8 h-8 rounded-lg bg-gray-200 animate-pulse" />
+                                            <div className="h-5 w-56 bg-gray-200 rounded animate-pulse" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-6 bg-white">
+                                        <div className="relative space-y-0">
+                                            <div className="absolute left-4 top-2 bottom-10 w-[2px] bg-gray-100" />
+                                            {[1, 2, 3].map((i) => (
+                                                <div key={i} className="relative pl-12 pb-10 last:pb-0">
+                                                    <div className="absolute left-0 top-1 w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+                                                            <div className="h-5 w-24 bg-gray-100 rounded animate-pulse" />
+                                                        </div>
+                                                        <div className="h-3 w-48 bg-gray-100 rounded animate-pulse" />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* Sidebar Skeleton */}
+                            <div className="space-y-6">
+                                {/* Survey Card Skeleton */}
+                                <Card className="border-2 border-gray-100">
+                                    <CardHeader className="pb-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-7 h-7 rounded-full bg-gray-200 animate-pulse" />
+                                            <div className="h-5 w-28 bg-gray-200 rounded animate-pulse" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="pt-2 space-y-4">
+                                        <div className="h-4 w-full bg-gray-100 rounded animate-pulse" />
+                                        <div className="flex justify-center gap-2 py-2">
+                                            {[1, 2, 3, 4, 5].map((i) => (
+                                                <div key={i} className="w-8 h-8 bg-gray-200 rounded animate-pulse" />
+                                            ))}
+                                        </div>
+                                        <div className="h-20 w-full bg-gray-100 rounded-lg animate-pulse" />
+                                        <div className="h-9 w-full bg-gray-200 rounded-md animate-pulse" />
+                                    </CardContent>
+                                </Card>
+
+                                {/* Info Card Skeleton */}
+                                <Card>
+                                    <CardHeader className="pb-3 border-b">
+                                        <div className="h-5 w-32 bg-gray-200 rounded animate-pulse" />
+                                    </CardHeader>
+                                    <CardContent className="pt-4 space-y-4">
+                                        <div className="space-y-2">
+                                            <div className="h-4 w-full bg-gray-100 rounded animate-pulse" />
+                                            <div className="h-4 w-5/6 bg-gray-100 rounded animate-pulse" />
+                                            <div className="h-4 w-4/6 bg-gray-100 rounded animate-pulse" />
+                                        </div>
+                                        <div className="h-9 w-full bg-gray-200 rounded-md animate-pulse" />
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
                 <Footer />
             </div>
         );
@@ -265,21 +423,13 @@ export default function LacakDetail() {
                                             <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                                                 <Clock className="w-4 h-4 text-primary" />
                                             </div>
-                                            Status Perjalanan Dokumen
+                                            Status Perjalanan Permohonan
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6 bg-white">
                                         <div className="relative space-y-0">
                                             {/* Vertical Line */}
-                                            <div className="absolute left-4 top-2 bottom-10 w-[2px] bg-gray-100" />
-                                            <div
-                                                className="absolute left-4 top-2 bottom-10 w-[2px] bg-primary transition-all duration-1000 origin-top"
-                                                style={{
-                                                    height: `${permit.status === 'disetujui' || permit.status === 'ditolak' ? '100%' :
-                                                        permit.status === 'proses' ? '50%' : '0%'
-                                                        }`
-                                                }}
-                                            />
+                                            <div className="absolute left-4 top-2 bottom-10 w-[2px] bg-primary" />
 
                                             {processSteps.map((step, idx) => {
                                                 // Determine status state
@@ -302,11 +452,8 @@ export default function LacakDetail() {
                                                     else if (permit.status === 'proses') state = 'pending';
                                                 }
 
-                                                // Special handling for rejection
                                                 const isRejected = step.id === 'disetujui' && permit.status === 'ditolak';
 
-                                                // Find matching history for date if available
-                                                // We try to find the *latest* log that matches this step's intent
                                                 const historyLog = permit.statusHistory.find(h => {
                                                     if (step.id === 'diajukan') return h.status === 'diajukan';
                                                     if (step.id === 'proses') return h.status === 'proses';
@@ -314,31 +461,43 @@ export default function LacakDetail() {
                                                     return false;
                                                 });
 
+                                                if (state === 'pending') return null;
+
                                                 return (
                                                     <div key={step.id} className="relative pl-12 pb-10 last:pb-0">
+                                                        {/* Radar ping animation - only on current/active step */}
+                                                        {state === 'current' && (
+                                                            <>
+                                                                <span className={cn(
+                                                                    "absolute left-0 top-1 w-8 h-8 rounded-full animate-ping opacity-30",
+                                                                    isRejected ? "bg-red-400" : "bg-primary"
+                                                                )} />
+                                                                <span className={cn(
+                                                                    "absolute left-0 top-1 w-8 h-8 rounded-full animate-ping opacity-20 [animation-delay:5.5s]",
+                                                                    isRejected ? "bg-red-400" : "bg-primary"
+                                                                )} />
+                                                            </>
+                                                        )}
                                                         {/* Node Icon */}
                                                         <div
                                                             className={cn(
                                                                 "absolute left-0 top-1 w-8 h-8 rounded-full flex items-center justify-center z-10 border-4 transition-all duration-300",
                                                                 state === 'completed' ? (isRejected ? "bg-red-500 border-red-100" : "bg-primary border-primary/20") :
-                                                                    state === 'current' ? "bg-white border-primary animate-pulse" :
-                                                                        "bg-gray-100 border-white"
+                                                                    "bg-primary border-primary/20"
                                                             )}
                                                         >
-                                                            {state === 'completed' ? (
-                                                                isRejected ? <XCircle className="w-4 h-4 text-white" /> : <Check className="w-4 h-4 text-white" strokeWidth={3} />
-                                                            ) : state === 'current' ? (
-                                                                <div className="w-3 h-3 bg-primary rounded-full" />
-                                                            ) : (
-                                                                <div className="w-2 h-2 rounded-full bg-gray-400" />
-                                                            )}
+                                                            {(() => {
+                                                                const iconColor = state === 'completed' ? (isRejected ? "text-white" : "text-white") :
+                                                                    "text-white";
+                                                                if (step.id === 'diajukan') return <IdCardIcon ref={idCardRef} size={16} className={iconColor} />;
+                                                                if (step.id === 'proses') return <FileCogIcon ref={fileCogRef} size={16} className={iconColor} />;
+                                                                if (isRejected) return <XIcon ref={xIconRef} size={16} className={iconColor} />;
+                                                                return <FileCheck2Icon ref={fileCheck2Ref} size={16} className={iconColor} />;
+                                                            })()}
                                                         </div>
 
                                                         {/* Content */}
-                                                        <div className={cn(
-                                                            "flex flex-col gap-1 transition-all duration-500",
-                                                            state === 'pending' ? "opacity-50 grayscale" : "opacity-100"
-                                                        )}>
+                                                        <div className="flex flex-col gap-1 transition-all duration-500">
                                                             <div className="flex items-center justify-between gap-2">
                                                                 <h4 className={cn(
                                                                     "text-sm md:text-base font-bold tracking-tight",
@@ -353,18 +512,20 @@ export default function LacakDetail() {
                                                                 )}
                                                             </div>
 
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {step.description}
+                                                            <p className={cn("text-xs", isRejected ? "text-red-500" : "text-muted-foreground")}>
+                                                                {isRejected
+                                                                    ? "Permohonan anda tidak dapat diproses lebih lanjut."
+                                                                    : step.description}
                                                             </p>
 
-                                                            {/* Show rejection reason only on the final step if rejected */}
+                                                            {/* rejection reason */}
                                                             {isRejected && permit.rejectionReason && (
                                                                 <div className="mt-2 text-xs bg-red-50 text-red-600 p-2 rounded-md border border-red-100">
                                                                     Alasan: {permit.rejectionReason}
                                                                 </div>
                                                             )}
 
-                                                            {/* Show output files if approved */}
+                                                            {/* output files */}
                                                             {step.id === 'disetujui' && permit.status === 'disetujui' && (
                                                                 (() => {
                                                                     const outputFiles = permit.attachments?.filter(a => a.category === 'output');
@@ -556,36 +717,8 @@ export default function LacakDetail() {
                                 </Card>
                             ) : null}
 
-                            <Card>
-                                <CardHeader className="pb-3 border-b">
-                                    <CardTitle className="text-base">Butuh Informasi?</CardTitle>
-                                </CardHeader>
-                                <CardContent className="pt-4 space-y-4">
-                                    <p className="text-sm text-muted-foreground leading-relaxed">
-                                        Jika Anda memiliki pertanyaan terkait status permohonan, silakan hubungi layanan pelanggan kami dengan menyebutkan nomor lacak.
-                                    </p>
-                                    <Button className="w-full" variant="outline">
-                                        Hubungi CS
-                                    </Button>
-                                </CardContent>
-                            </Card>
-
-                            {permit.status === 'ditolak' && permit.rejectionReason && (
-                                <Card className="border-red-100 bg-red-50/50">
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm text-red-800 flex items-center gap-2">
-                                            <AlertCircle className="w-4 h-4" /> Alasan Penolakan
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <p className="text-sm text-red-700 italic">
-                                            "{permit.rejectionReason}"
-                                        </p>
-                                    </CardContent>
-                                </Card>
-                            )}
-
                         </motion.div>
+                        <FloatingContact />
                     </div>
                 </div>
             </div>

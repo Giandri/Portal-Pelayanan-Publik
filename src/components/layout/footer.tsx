@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { MapPin, Phone, Mail } from "lucide-react";
+import { Link003, Link001 } from "@/components/ui/skiper-ui/skiper40";
 
 export function Footer() {
     return (
@@ -35,28 +36,28 @@ export function Footer() {
                                 <h4 className="font-semibold text-gray-700 mb-2 text-xs tracking-wider">PINTASAN</h4>
                                 <ul className="space-y-2">
                                     <li>
-                                        <Link
+                                        <Link003
                                             href="/"
-                                            className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                                            className="w-fit text-xs text-gray-500 hover:text-gray-700 transition-colors"
                                         >
                                             Beranda
-                                        </Link>
+                                        </Link003>
                                     </li>
                                     <li>
-                                        <Link
+                                        <Link003
                                             href="/pengajuan"
-                                            className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                                            className="w-fit text-xs text-gray-500 hover:text-gray-700 transition-colors"
                                         >
                                             Pengajuan
-                                        </Link>
+                                        </Link003>
                                     </li>
                                     <li>
-                                        <Link
+                                        <Link003
                                             href="/lacak"
-                                            className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                                            className="w-fit text-xs text-gray-500 hover:text-gray-700 transition-colors"
                                         >
                                             Lacak
-                                        </Link>
+                                        </Link003>
                                     </li>
                                 </ul>
                             </div>
@@ -67,21 +68,21 @@ export function Footer() {
                                 <ul className="space-y-2">
                                     <li className="flex items-start gap-2">
                                         <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-                                        <span className="text-xs text-gray-500 leading-relaxed">
-                                            Jln. Mentok Km.4 Pangkalpinang, Kota Timur, Merudu, Barat, Kabupaten Bangka, Kepulauan Bangka Belitung 33215
-                                        </span>
+                                        <Link001 href="https://maps.app.goo.gl/oMYUJHCmTmF7gmN48" className="text-xs text-justify text-gray-500 hover:text-gray-700 transition-colors">
+                                            Jln. Mentok Km.4 Pangkalpinang, Kace Timur, Kec. Mendo Barat, Kabupaten Bangka, Kepulauan Bangka Belitung 33173
+                                        </Link001>
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <Phone className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                                        <a href="tel:+627174243534" className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
-                                            +62 (717) 4243534
-                                        </a>
+                                        <Link003 href="https://wa.me/6281171711414" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
+                                            +62 81171711414 (Pengaduan BWS)
+                                        </Link003>
                                     </li>
                                     <li className="flex items-center gap-2">
                                         <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                                        <a href="mailto:bbws.babelbb@gmail.com" className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
-                                            bbws.babelbb@gmail.com
-                                        </a>
+                                        <Link003 href="https://mail.google.com/mail/?view=cm&fs=1&to=ppid.bwsbabel@gmail.com" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
+                                            ppid.bwsbabel@gmail.com
+                                        </Link003>
                                     </li>
                                 </ul>
                             </div>
