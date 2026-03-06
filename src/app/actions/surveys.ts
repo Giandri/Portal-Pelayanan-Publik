@@ -43,7 +43,7 @@ export async function getPublicSurveys() {
         const surveys = await db.survey.findMany({
             where: {
                 rating: {
-                    gte: 4
+                    gte: 1
                 },
                 comment: {
                     not: null,
@@ -73,7 +73,7 @@ export async function getPublicSurveys() {
         console.log("Fetched public surveys:", JSON.stringify(surveys, null, 2));
 
         // Filter out short comments locally if needed, or rely on UI to handle
-        return surveys.filter((s: any) => (s.comment?.length || 0) >= 3).map((survey: any) => ({
+        return surveys.filter((s: any) => (s.comment?.length || 0) >= 1).map((survey: any) => ({
             id: survey.id,
             name: survey.permit.name,
             agency: survey.permit.agencyName,

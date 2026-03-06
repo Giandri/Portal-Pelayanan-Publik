@@ -40,7 +40,9 @@ export const statusConfig: Record<PermitStatus, { label: string; color: string; 
     diajukan: { label: "Diajukan", color: "#f59e0b", bgColor: "#fef3c7" },
     proses: { label: "Dalam Proses", color: "#3b82f6", bgColor: "#dbeafe" },
     disetujui: { label: "Disetujui", color: "#22c55e", bgColor: "#dcfce7" },
+    selesai: { label: "Selesai", color: "#64748b", bgColor: "#f1f5f9" },
     ditolak: { label: "Ditolak", color: "#ef4444", bgColor: "#fee2e2" },
+    diarsipkan: { label: "Diarsipkan", color: "#94a3b8", bgColor: "#f8fafc" },
 };
 
 // Status Flow for Timeline
@@ -48,7 +50,9 @@ export const statusFlow: PermitStatus[] = [
     "diajukan",
     "proses",
     "disetujui",
-    "ditolak", // Added
+    "ditolak",
+    "selesai",
+
 ];
 
 // Process Steps Pipeline
@@ -67,5 +71,10 @@ export const processSteps = [
         id: "disetujui",
         label: "Persetujuan",
         description: "Permohonan anda telah disetujui. Jangan lupa memberikan penilaian untuk meningkatkan kualitas layanan kami.   ",
+    },
+    {
+        id: "selesai",
+        label: "Selesai",
+        description: "Permohonan telah sepenuhnya selesai.",
     },
 ];

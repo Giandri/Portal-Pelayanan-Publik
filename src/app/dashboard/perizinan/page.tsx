@@ -283,7 +283,7 @@ export default function PermitDashboard() {
     const { data: initialPermits = [], isLoading, refetch } = useQuery<Permit[]>({
         queryKey: ['permits'],
         queryFn: async () => {
-            const response = await fetch("/api/permits");
+            const response = await fetch("/api/permits?isKanban=true");
             if (!response.ok) throw new Error("Failed to fetch");
             return response.json();
         }
@@ -361,9 +361,6 @@ export default function PermitDashboard() {
     }, [selectedPermit]);
 
     function onDragStart(event: DragStartEvent) {
-        // ... (skip lines)
-        // ...
-
         setActiveDragId(event.active.id as string);
         if (event.active.data.current?.type === "Permit") {
             setSelectedPermitId(event.active.id as string);
@@ -424,7 +421,6 @@ export default function PermitDashboard() {
 
     // Unified Status Update Function
     async function updateStatus(permitId: string, newStatus: PermitStatus, reason?: string) {
-        // Optimistic Update
         const previousPermits = [...permits];
 
         setPermits(prev => prev.map(p =>
@@ -459,6 +455,26 @@ export default function PermitDashboard() {
             console.error(error);
             toast.error("Gagal memperbarui status");
             setPermits(previousPermits); // Rollback
+        } finally {
+            setIsUpdating(false);
+        }
+    }
+
+    // Archive Handler
+    async function handleArchivePermit(permitId: string) {
+        setIsUpdating(true);
+        try {
+            const res = await fetch('/api/permits/archive', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: permitId })
+            });
+            if (!res.ok) throw new Error("Gagal mengarsipkan permohonan");
+            toast.success("Permohonan berhasil disembunyikan dari papan Kanban");
+            setSelectedPermitId(null);
+            refetch();
+        } catch (error) {
+            toast.error("Gagal menyembunyikan permohonan");
         } finally {
             setIsUpdating(false);
         }
@@ -696,9 +712,6 @@ export default function PermitDashboard() {
                                                             onClientUploadComplete={async (res) => {
                                                                 try {
                                                                     toast.success("Dokumen berhasil diunggah!");
-
-                                                                    // Post metadata to our API to link it to the permit
-                                                                    // We send the file data returned from UploadThing
                                                                     const filesData = res.map(file => ({
                                                                         name: file.name,
                                                                         url: file.url,
@@ -966,7 +979,7 @@ export default function PermitDashboard() {
                                         </Button>
                                     )}
                                     {selectedPermit.status === 'proses' && (
-                                        <div className="grid grid-cols-2 gap-2">
+                                        <div className="grid grid-cols-2 gap-2 mt-2">
                                             <Button
                                                 className="w-full bg-yellow-400 hover:bg-yellow-500 text-yellow-950 font-medium"
                                                 disabled={isUpdating}
@@ -981,6 +994,21 @@ export default function PermitDashboard() {
                                             >
                                                 Tolak
                                             </Button>
+                                        </div>
+                                    )}
+                                    {['selesai', 'ditolak'].includes(selectedPermit.status) && (
+                                        <div className="mt-4 pt-4 border-t border-dashed">
+                                            <Button
+                                                variant="outline"
+                                                className="w-full bg-red-600 hover:bg-red-700 text-white"
+                                                disabled={isUpdating}
+                                                onClick={() => handleArchivePermit(selectedPermit.id)}
+                                            >
+                                                Hapus Permohonan
+                                            </Button>
+                                            <p className="text-[10px] text-muted-foreground text-center mt-2 leading-tight">
+                                                Permohonan ini tidak akan tampil lagi di papan Kanban, namun tetap bisa dilihat dari daftar Riwayat.
+                                            </p>
                                         </div>
                                     )}
                                 </CardContent>

@@ -334,7 +334,7 @@ export default function SurveyPage() {
                         <Button variant="outline" onClick={() => setSurveyToDelete(null)} disabled={isDeleting}>
                             Batal
                         </Button>
-                        <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+                        <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={handleDelete} disabled={isDeleting}>
                             {isDeleting ? "Menghapus..." : "Hapus"}
                         </Button>
                     </DialogFooter>

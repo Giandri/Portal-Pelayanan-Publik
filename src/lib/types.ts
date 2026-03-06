@@ -3,7 +3,9 @@ export type PermitStatus =
     | "diajukan"
     | "proses"
     | "disetujui"
-    | "ditolak";
+    | "selesai"
+    | "ditolak"
+    | "diarsipkan";
 
 export interface PermitAttachment {
     id: string;
@@ -52,4 +54,5 @@ export interface Permit {
         comment?: string | null;
         createdAt: string | Date;
     };
+    isArchived?: boolean;
 }

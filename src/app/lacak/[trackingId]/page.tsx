@@ -43,6 +43,8 @@ const iconMap: Record<string, any> = {
     CloudRain
 };
 
+import { ShieldCheckIcon, type ShieldCheckIconHandle } from "@/components/ui/shield-check-icon";
+
 export default function LacakDetail() {
     const params = useParams();
     const trackingId = params.trackingId as string;
@@ -60,6 +62,7 @@ export default function LacakDetail() {
     const fileCogRef = useRef<FileCogIconHandle>(null);
     const fileCheck2Ref = useRef<FileCheck2IconHandle>(null);
     const xIconRef = useRef<XIconHandle>(null);
+    const shieldCheckRef = useRef<ShieldCheckIconHandle>(null);
 
     const handleSubmitSurvey = async () => {
         if (rating === 0) {
@@ -85,7 +88,11 @@ export default function LacakDetail() {
                 throw new Error(data.error || "Gagal mengirim survei");
             }
 
-            toast.success("Terima kasih atas penilaian Anda!");
+            const successMessage = rating < 3
+                ? "Mohon maaf atas ketidaknyamanan Anda. Masukan Anda akan kami jadikan bahan evaluasi perbaikan layanan."
+                : "Terima kasih atas penilaian Anda!";
+
+            toast.success(successMessage);
 
             // Update local permit state to show submitted state immediately
             if (permit) {
@@ -137,6 +144,7 @@ export default function LacakDetail() {
             diajukan: idCardRef,
             proses: fileCogRef,
             disetujui: fileCheck2Ref,
+            selesai: shieldCheckRef,
             ditolak: xIconRef,
         };
         const activeRef = activeRefMap[permit.status];
@@ -147,6 +155,7 @@ export default function LacakDetail() {
             fileCogRef.current?.startAnimation();
             fileCheck2Ref.current?.startAnimation();
             xIconRef.current?.startAnimation();
+            shieldCheckRef.current?.startAnimation();
         }, 500);
 
         // Loop only the active step icon
@@ -443,21 +452,30 @@ export default function LacakDetail() {
                                                 // Step 2: Proses
                                                 if (step.id === 'proses') {
                                                     if (permit.status === 'proses') state = 'current';
-                                                    else if (['disetujui', 'ditolak'].includes(permit.status)) state = 'completed';
+                                                    else if (['disetujui', 'selesai', 'ditolak'].includes(permit.status)) state = 'completed';
                                                 }
 
-                                                // Step 3: Keputusan
-                                                if (step.id === 'disetujui') { // Target ID in constants is 'disetujui' for the last step
-                                                    if (['disetujui', 'ditolak'].includes(permit.status)) state = 'completed';
+                                                // Step 3: Keputusan (Disetujui)
+                                                if (step.id === 'disetujui') {
+                                                    if (['disetujui'].includes(permit.status)) state = 'current';
+                                                    else if (['selesai', 'ditolak'].includes(permit.status)) state = 'completed';
                                                     else if (permit.status === 'proses') state = 'pending';
                                                 }
 
-                                                const isRejected = step.id === 'disetujui' && permit.status === 'ditolak';
+                                                // Step 4: Selesai
+                                                if (step.id === 'selesai') {
+                                                    if (permit.status === 'selesai') state = 'completed';
+                                                    else if (permit.status === 'ditolak') state = 'completed';
+                                                    else state = 'pending';
+                                                }
+
+                                                const isRejected = ['disetujui', 'selesai'].includes(step.id) && permit.status === 'ditolak';
 
                                                 const historyLog = permit.statusHistory.find(h => {
                                                     if (step.id === 'diajukan') return h.status === 'diajukan';
                                                     if (step.id === 'proses') return h.status === 'proses';
-                                                    if (step.id === 'disetujui') return ['disetujui', 'ditolak'].includes(h.status);
+                                                    if (step.id === 'disetujui') return h.status === 'disetujui' || h.status === 'ditolak';
+                                                    if (step.id === 'selesai') return h.status === 'selesai';
                                                     return false;
                                                 });
 
@@ -491,8 +509,15 @@ export default function LacakDetail() {
                                                                     "text-white";
                                                                 if (step.id === 'diajukan') return <IdCardIcon ref={idCardRef} size={16} className={iconColor} />;
                                                                 if (step.id === 'proses') return <FileCogIcon ref={fileCogRef} size={16} className={iconColor} />;
-                                                                if (isRejected) return <XIcon ref={xIconRef} size={16} className={iconColor} />;
-                                                                return <FileCheck2Icon ref={fileCheck2Ref} size={16} className={iconColor} />;
+                                                                if (step.id === 'disetujui') {
+                                                                    if (permit.status === 'ditolak') return <XIcon ref={xIconRef} size={16} className={iconColor} />;
+                                                                    return <FileCheck2Icon ref={fileCheck2Ref} size={16} className={iconColor} />;
+                                                                }
+                                                                if (step.id === 'selesai') {
+                                                                    if (permit.status === 'ditolak') return <XIcon ref={xIconRef} size={16} className={iconColor} />;
+                                                                    return <ShieldCheckIcon ref={shieldCheckRef} size={16} className={iconColor} />;
+                                                                }
+                                                                return <FileCheck2Icon size={16} className={iconColor} />;
                                                             })()}
                                                         </div>
 
@@ -526,7 +551,7 @@ export default function LacakDetail() {
                                                             )}
 
                                                             {/* output files */}
-                                                            {step.id === 'disetujui' && permit.status === 'disetujui' && (
+                                                            {step.id === 'disetujui' && ['disetujui', 'selesai'].includes(permit.status) && (
                                                                 (() => {
                                                                     const outputFiles = permit.attachments?.filter(a => a.category === 'output');
                                                                     if (!outputFiles || outputFiles.length === 0) return null;
@@ -599,21 +624,24 @@ export default function LacakDetail() {
                             className="space-y-6"
                         >
                             {/* Survey Section */}
-                            {permit.status === 'disetujui' || permit.status === 'ditolak' ? (
+                            {['disetujui', 'selesai', 'ditolak'].includes(permit.status) ? (
                                 <Card className={cn(
-                                    "border-2 transition-all duration-500 overflow-hidden relative",
+                                    "border-2 transition-all duration-500 overflow-hidden relative gap-2 py-4",
                                     permit.survey ? "border-green-100 bg-green-50/30" : "border-primary/10 bg-linear-to-br from-white to-blue-50/50"
                                 )}>
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
-                                    <CardHeader className="pb-2">
+                                    <CardHeader className="pb-0">
                                         <CardTitle className="text-base flex items-center gap-2">
                                             {permit.survey ? (
                                                 <>
-                                                    <div className="p-1.5 bg-green-100 rounded-full text-green-600">
-                                                        <CheckCircle2 className="w-4 h-4" />
+                                                    <div className={cn(
+                                                        "p-1.5 rounded-full",
+                                                        (permit.survey?.rating || 0) < 3 ? "bg-orange-100 text-orange-600" : "bg-green-100 text-green-600"
+                                                    )}>
+                                                        {(permit.survey?.rating || 0) < 3 ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                                                     </div>
-                                                    Terima Kasih!
+                                                    {(permit.survey?.rating || 0) < 3 ? "Mohon Maaf" : "Terima Kasih!"}
                                                 </>
                                             ) : (
                                                 <>
@@ -625,11 +653,17 @@ export default function LacakDetail() {
                                             )}
                                         </CardTitle>
                                     </CardHeader>
-                                    <CardContent className="pt-2 space-y-4">
+                                    <CardContent className="pt-0 space-y-3">
                                         {permit.survey ? (
-                                            <div className="space-y-3">
-                                                <p className="text-sm text-muted-foreground">
-                                                    Anda telah memberikan penilaian pada tanggal {formatDate(permit.survey.createdAt)}.
+                                            <div className="space-y-2">
+                                                <p className="text-sm text-justify font-medium text-gray-700">
+                                                    {(permit.survey?.rating || 0) < 3
+                                                        ? "Mohon maaf atas ketidaknyamanan Anda. Masukan Anda akan kami jadikan bahan evaluasi perbaikan layanan."
+                                                        : "Terima kasih atas penilaian dan kepercayaan Anda menggunakan layanan kami."
+                                                    }
+                                                </p>
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    Dikirim pada {formatDate(permit.survey.createdAt)}
                                                 </p>
                                                 <div className="flex flex-col gap-1 bg-white/60 p-3 rounded-lg border border-black/5">
                                                     <div className="flex items-center gap-1">

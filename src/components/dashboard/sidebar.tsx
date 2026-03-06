@@ -11,6 +11,7 @@ import {
     Menu,
     X,
     Star,
+    History as HistoryIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -20,6 +21,7 @@ const sidebarLinks = [
     { href: "/dashboard/perizinan", icon: FileStack, label: "KELOLA\nPERIZINAN" },
     { href: "/dashboard/data", icon: ClipboardList, label: "KELOLA\nDATA" },
     { href: "/dashboard/profil", icon: UserCircle, label: "PROFIL\nPEMOHON" },
+    { href: "/dashboard/riwayat", icon: HistoryIcon, label: "RIWAYAT" },
     { href: "/dashboard/surveys", icon: Star, label: "SURVEI\nKEPUASAN" },
 ];
 

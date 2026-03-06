@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { Permit, PermitStatus } from "@/lib/types";
 
 
-export async function getPermits(options: { summary?: boolean } = {}): Promise<Permit[]> {
+export async function getPermits(options: { summary?: boolean; isKanban?: boolean } = {}): Promise<Permit[]> {
     try {
         const include = options.summary ? undefined : {
             history: true,
@@ -14,8 +14,23 @@ export async function getPermits(options: { summary?: boolean } = {}): Promise<P
         // Debug log
         console.log(`Fetching permits with options:`, options);
 
+        let whereClause: any = {};
+        if (options.isKanban) {
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            whereClause = {
+                isArchived: false,
+                OR: [
+                    { status: { not: "selesai" } },
+                    {
+                        status: "selesai",
+                        updatedAt: { gte: twentyFourHoursAgo }
+                    }
+                ]
+            };
+        }
 
         const permits = await db.permit.findMany({
+            where: whereClause,
             orderBy: {
                 createdAt: "desc",
             },
@@ -61,6 +76,7 @@ export async function getPermits(options: { summary?: boolean } = {}): Promise<P
                         uploadedAt: a.createdAt || new Date().toISOString(),
                         url: a.url,
                     })),
+                    isArchived: permit.isArchived,
                     rejectionReason: permit.rejectionReason || undefined,
                     survey: permit.survey ? {
                         rating: permit.survey.rating,

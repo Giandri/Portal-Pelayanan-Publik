@@ -7,9 +7,11 @@ import { permitTypes } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const permits = await getPermits();
+        const { searchParams } = new URL(request.url);
+        const isKanban = searchParams.get("isKanban") === "true";
+        const permits = await getPermits({ isKanban });
         return NextResponse.json(permits);
     } catch (error) {
         return NextResponse.json(

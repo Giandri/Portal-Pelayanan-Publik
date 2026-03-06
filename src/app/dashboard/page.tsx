@@ -332,8 +332,6 @@ export default function DashboardClient() {
             </div>
 
             {/* Recent Permits Table */}
-
-            {/* Recent Permits Table */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -375,7 +373,7 @@ export default function DashboardClient() {
                         <thead>
                             <tr className="bg-blue-950/5">
                                 <th className="text-left text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-5 py-3">
-                                    No. Tracking
+                                    No. Lacak
                                 </th>
                                 <th className="text-left text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-5 py-3">
                                     Pemohon
