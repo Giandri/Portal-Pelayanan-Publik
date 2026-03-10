@@ -47,3 +47,17 @@ model StatusHistory {
   createdAt DateTime @default(now())
   createdBy String?
 }
+
+model GuestBook {
+  id             String   @id @default(cuid())
+  trackingId     String   @unique
+  name           String
+  email          String
+  nik            String
+  agencyName     String?
+  agencyCategory String?
+  phone          String
+  subject        String
+  description    String?
+  createdAt      DateTime @default(now())
+}

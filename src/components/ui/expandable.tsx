@@ -22,34 +22,32 @@ import { cn } from "@/lib/utils"
 const springConfig = { stiffness: 200, damping: 20, bounce: 0.2 }
 
 interface ExpandableContextType {
-  isExpanded: boolean // Indicates whether the component is expanded
-  toggleExpand: () => void // Function to toggle the expanded state
-  expandDirection: "vertical" | "horizontal" | "both" // Direction of expansion
-  expandBehavior: "replace" | "push" // How the expansion affects surrounding content
-  transitionDuration: number // Duration of the expansion/collapse animation
+  isExpanded: boolean
+  toggleExpand: () => void
+  expandDirection: "vertical" | "horizontal" | "both"
+  expandBehavior: "replace" | "push"
+  transitionDuration: number
   easeType:
-    | "easeInOut"
-    | "easeIn"
-    | "easeOut"
-    | "linear"
-    | [number, number, number, number] // Easing function for the animation
-  initialDelay: number // Delay before the animation starts
-  onExpandEnd?: () => void // Callback function when expansion ends
-  onCollapseEnd?: () => void // Callback function when collapse ends
+  | "easeInOut"
+  | "easeIn"
+  | "easeOut"
+  | "linear"
+  | [number, number, number, number]
+  initialDelay: number
+  onExpandEnd?: () => void
+  onCollapseEnd?: () => void
 }
 
-// Create a context with default values
 const ExpandableContext = createContext<ExpandableContextType>({
   isExpanded: false,
-  toggleExpand: () => {},
-  expandDirection: "vertical", // 'vertical' | 'horizontal' | 'both' // Direction of expansion
-  expandBehavior: "replace", // How the expansion affects surrounding content
-  transitionDuration: 0.3, // Duration of the expansion/collapse animation
-  easeType: "easeInOut" as const, // Easing function for the animation
+  toggleExpand: () => { },
+  expandDirection: "vertical",
+  expandBehavior: "replace",
+  transitionDuration: 0.3,
+  easeType: "easeInOut" as const,
   initialDelay: 0,
 })
 
-// Custom hook to use the ExpandableContext
 const useExpandable = () => useContext(ExpandableContext)
 
 type ExpandablePropsBase = Omit<HTMLMotionProps<"div">, "children">
@@ -60,11 +58,11 @@ interface ExpandableProps extends ExpandablePropsBase {
   onToggle?: () => void
   transitionDuration?: number
   easeType?:
-    | "easeInOut"
-    | "easeIn"
-    | "easeOut"
-    | "linear"
-    | [number, number, number, number]
+  | "easeInOut"
+  | "easeIn"
+  | "easeOut"
+  | "linear"
+  | [number, number, number, number]
   expandDirection?: "vertical" | "horizontal" | "both"
   expandBehavior?: "replace" | "push"
   initialDelay?: number

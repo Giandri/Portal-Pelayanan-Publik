@@ -134,7 +134,7 @@ export default function RiwayatPage() {
                                                         <span className="text-sm text-gray-500 font-medium">{index + 1}</span>
                                                     </div>
                                                     <div className="px-4 py-4 h-full flex items-center">
-                                                        <span className="font-mono text-sm font-semibold text-gray-700">{permit.trackingId}</span>
+                                                        <span className="font-mono text-xs font-semibold text-gray-500">{permit.trackingId}</span>
                                                     </div>
                                                     <div className="px-4 py-4 h-full flex items-center">
                                                         <div className="w-full overflow-hidden">

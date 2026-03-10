@@ -149,7 +149,7 @@ export function HeroCarousel() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5 }}
-                        className="text-lg md:text-xl text-white max-w-2xl mx-auto drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
+                        className="text-sm md:text-xl text-white max-w-2xl mx-auto drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]"
                     >
                         Sistem Informasi Pelayanan Publik Terpadu untuk Pengelolaan Sumber Daya Air
                     </motion.p>

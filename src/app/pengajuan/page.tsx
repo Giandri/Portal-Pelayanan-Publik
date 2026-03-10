@@ -238,7 +238,12 @@ export default function LayananPage() {
                 <form onSubmit={handleSubmit} className="space-y-6 mt-10">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-lg">Formulir Pengajuan</CardTitle>
+                            <CardTitle className="text-center">
+                                <h1 className="text-xl md:text-2xl font-bold text-black mb-1 drop-shadow-sm">Formulir Pengajuan</h1>
+                                <p className="text-gray-800 text-sm max-w-xl mx-auto font-medium">
+                                    Silakan isi formulir pengajuan di bawah ini.
+                                </p>
+                            </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4 -mt-6">
 
@@ -570,8 +575,8 @@ export default function LayananPage() {
                         </CardContent>
                     </Card>
                 </form>
-                <Footer />
             </div>
+            <Footer />
         </div >
     );
 }

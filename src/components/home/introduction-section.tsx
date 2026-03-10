@@ -20,17 +20,22 @@ export function IntroductionSection() {
                         <DockLink
                             href="/"
                             label="BERANDA"
-                            icon={<Home size={12} />}
+                            icon={<Home size={10} />}
+                        />
+                        <DockLink
+                            href="/buku-tamu"
+                            label="BUKU TAMU"
+                            icon={<FileText size={10} />}
                         />
                         <DockLink
                             href="/pengajuan"
                             label="PENGAJUAN"
-                            icon={<FileText size={12} />}
+                            icon={<FileText size={10} />}
                         />
                         <DockLink
                             href="/lacak"
                             label="CEK STATUS"
-                            icon={<Search size={12} />}
+                            icon={<Search size={10} />}
                         />
                     </Dock>
                 </div>

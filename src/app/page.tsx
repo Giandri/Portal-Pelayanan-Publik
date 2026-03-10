@@ -9,11 +9,12 @@ import { FeaturesSection } from "@/components/home/features-section";
 import { ActionsSection } from "@/components/home/actions-section";
 import { TestimonialsSection } from "@/components/home/testimonials-section";
 import { FloatingContact } from "@/components/layout/floating-contact";
-
+import { GratifikasiAlert } from "@/components/home/gratifikasi-alert";
 
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900">
+      <GratifikasiAlert />
       <Navbar />
       <HeroCarousel />
 

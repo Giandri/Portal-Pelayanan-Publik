@@ -30,7 +30,7 @@ export default function LoginPage() {
                 toast.error(result.error);
             } else {
                 toast.success("Login berhasil");
-                router.push("/dashboard");
+                router.push("/admin-menu");
             }
         } catch (error) {
             toast.error("Terjadi kesalahan saat login");

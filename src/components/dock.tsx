@@ -116,7 +116,7 @@ export const Dock = ({
           <div className="md:hidden w-full flex justify-center mt-6">
             <div className="relative">
               <div
-                className="bg-white/90 backdrop-blur-md border border-blue-950/20 rounded-full flex items-center p-1 gap-1"
+                className="bg-white/90 backdrop-blur-md border border-blue-950/20 rounded-full flex items-center p-0.5 gap-0.5"
               >
                 {React.Children.map(children, (child) => {
                   if (React.isValidElement(child)) {
@@ -453,7 +453,7 @@ export const DockLink = ({
 
   if (external) {
     const externalClassName = cn(
-      "transition-colors duration-200 text-[10px] leading-[10px] flex items-center gap-1 h-[28px] rounded-full px-[10px] font-bold",
+      "transition-colors duration-200 text-[9px] leading-[9px] flex items-center gap-1 h-[24px] rounded-full px-[8px] font-bold",
       isActive
         ? "bg-blue-950 text-yellow-400"
         : "text-blue-950/70 hover:text-blue-950 hover:bg-blue-950/5",
@@ -506,7 +506,7 @@ export const DockLink = ({
       <button
         onClick={handleClick}
         className={cn(
-          "relative z-10 text-[10px] leading-[10px] flex items-center gap-1 h-[28px] rounded-full px-[10px] font-bold transition-colors duration-200 cursor-pointer",
+          "relative z-10 text-[9px] leading-[9px] flex items-center gap-1 h-[24px] rounded-full px-[8px] font-bold transition-colors duration-200 cursor-pointer",
           showActive
             ? "text-yellow-400"
             : "text-blue-950/70 hover:text-blue-950",
