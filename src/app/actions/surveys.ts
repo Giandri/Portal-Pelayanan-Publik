@@ -13,6 +13,13 @@ export async function getSurveys() {
                         type: true,
                         status: true,
                     }
+                },
+                guestBook: {
+                    select: {
+                        trackingId: true,
+                        name: true,
+                        subject: true,
+                    }
                 }
             },
             orderBy: {
@@ -25,11 +32,16 @@ export async function getSurveys() {
             rating: survey.rating,
             comment: survey.comment,
             createdAt: survey.createdAt,
-            permit: {
+            permit: survey.permit ? {
                 trackingId: survey.permit.trackingId,
                 applicantName: survey.permit.name,
                 type: survey.permit.type,
                 status: survey.permit.status
+            } : {
+                trackingId: survey.guestBook?.trackingId || "-",
+                applicantName: survey.guestBook?.name || "-",
+                type: "buku-tamu",
+                status: "kunjungan"
             }
         }));
     } catch (error) {
@@ -45,14 +57,6 @@ export async function getPublicSurveys() {
                 rating: {
                     gte: 1
                 },
-                comment: {
-                    not: null,
-                },
-                AND: {
-                    comment: {
-                        not: ""
-                    }
-                }
             },
             include: {
                 permit: {
@@ -60,6 +64,13 @@ export async function getPublicSurveys() {
                         name: true,
                         agencyName: true,
                         type: true,
+                    }
+                },
+                guestBook: {
+                    select: {
+                        name: true,
+                        agencyName: true,
+                        subject: true,
                     }
                 }
             },
@@ -69,15 +80,13 @@ export async function getPublicSurveys() {
             take: 10
         });
 
-
         console.log("Fetched public surveys:", JSON.stringify(surveys, null, 2));
 
-        // Filter out short comments locally if needed, or rely on UI to handle
-        return surveys.filter((s: any) => (s.comment?.length || 0) >= 1).map((survey: any) => ({
+        return surveys.map((survey: any) => ({
             id: survey.id,
-            name: survey.permit.name,
-            agency: survey.permit.agencyName,
-            text: survey.comment as string,
+            name: survey.permit?.name || survey.guestBook?.name || "-",
+            agency: survey.permit?.agencyName || survey.guestBook?.agencyName || null,
+            text: survey.comment || "",
             rating: survey.rating
         }));
     } catch (error) {

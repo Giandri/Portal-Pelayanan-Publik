@@ -16,37 +16,50 @@ export async function POST(request: Request) {
             );
         }
 
-        // Find permit first to get ID
+        // Try to find a Permit first
         const permit = await db.permit.findUnique({
             where: { trackingId },
         });
 
-        if (!permit) {
-            return NextResponse.json(
-                { error: "Permohonan tidak ditemukan" },
-                { status: 404 }
-            );
+        if (permit) {
+            const survey = await db.survey.create({
+                data: {
+                    rating,
+                    comment,
+                    permitId: permit.id,
+                },
+            });
+            console.log("Survey created for permit:", survey);
+            return NextResponse.json(survey);
         }
 
-        // Create survey
-        const survey = await db.survey.create({
-            data: {
-                rating,
-                comment,
-                permitId: permit.id,
-            },
+        // If no permit found, try GuestBook
+        const guestBook = await db.guestBook.findUnique({
+            where: { trackingId },
         });
 
-        console.log("Survey created:", survey);
+        if (guestBook) {
+            const survey = await db.survey.create({
+                data: {
+                    rating,
+                    comment,
+                    guestBookId: guestBook.id,
+                },
+            });
+            console.log("Survey created for guest book:", survey);
+            return NextResponse.json(survey);
+        }
 
-        return NextResponse.json(survey);
+        return NextResponse.json(
+            { error: "Data tidak ditemukan" },
+            { status: 404 }
+        );
     } catch (error: any) {
         console.error("Error creating survey:", error);
 
-        // Handle unique constraint violation (already submitted)
         if (error.code === 'P2002') {
             return NextResponse.json(
-                { error: "Anda sudah mengisi survei untuk permohonan ini" },
+                { error: "Anda sudah mengisi survei" },
                 { status: 409 }
             );
         }

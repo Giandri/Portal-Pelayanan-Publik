@@ -30,12 +30,14 @@ model Permit {
 }
 
 model Survey {
-  id        String   @id @default(cuid())
-  rating    Int
-  comment   String?
-  permitId  String   @unique
-  permit    Permit   @relation(fields: [permitId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id          String     @id @default(cuid())
+  rating      Int
+  comment     String?
+  permitId    String?    @unique
+  permit      Permit?    @relation(fields: [permitId], references: [id], onDelete: Cascade)
+  guestBookId String?    @unique
+  guestBook   GuestBook? @relation(fields: [guestBookId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
 }
 
 model StatusHistory {
@@ -61,4 +63,5 @@ model GuestBook {
   description    String?
   isScanned      Boolean  @default(false)
   createdAt      DateTime @default(now())
+  survey         Survey?
 }
