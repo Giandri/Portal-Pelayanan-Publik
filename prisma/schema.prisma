@@ -59,5 +59,6 @@ model GuestBook {
   phone          String
   subject        String
   description    String?
+  isScanned      Boolean  @default(false)
   createdAt      DateTime @default(now())
 }

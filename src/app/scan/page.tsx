@@ -9,6 +9,7 @@ import { Html5Qrcode } from "html5-qrcode";
 import { toast } from "sonner";
 import { Toaster } from "sonner";
 import { useRouter } from "next/navigation";
+import { markGuestBookScanned } from "@/app/actions/guest-book";
 
 export default function ScanPage() {
     const [scanResult, setScanResult] = useState<string | null>(null);
@@ -80,6 +81,11 @@ export default function ScanPage() {
                         setScanResult(parsedId);
                         setIsScanning(false);
                         toast.success("QR Code buku tamu berhasil dipindai!");
+
+                        // Mark as scanned in database if it's a BWS tracking ID
+                        if (parsedId.startsWith("BWS-")) {
+                            markGuestBookScanned(parsedId).catch(() => { });
+                        }
 
                         if (scannerRef.current?.isScanning) {
                             scannerRef.current

@@ -68,3 +68,16 @@ export async function getGuestBookByTrackingId(trackingId: string) {
         return null;
     }
 }
+
+export async function markGuestBookScanned(trackingId: string) {
+    try {
+        await db.guestBook.update({
+            where: { trackingId },
+            data: { isScanned: true },
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to mark guest book as scanned:", error);
+        return { success: false };
+    }
+}

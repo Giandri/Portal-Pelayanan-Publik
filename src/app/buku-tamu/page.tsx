@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createGuestBookEntry } from "@/app/actions/guest-book";
+import { Rating, RatingButton } from "@/components/kibo-ui/rating";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { Toaster } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
@@ -13,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/animate-ui/primitives/radix/accordion";
 import { RichSelect } from "@/components/ui/rich-select";
 import { AgencyGridSelector } from "@/components/tracking/AgencyGridSelector";
-import { Check, ChevronRight, ChevronLeft, User, MessageSquare, Send, CheckCircle, Info, ChevronDown, Building2, Landmark, GraduationCap } from "lucide-react";
+import { Check, ChevronRight, ChevronLeft, User, MessageSquare, Send, CheckCircle, Info, ChevronDown, Building2, Landmark, GraduationCap, Star } from "lucide-react";
 import QRCode from "react-qr-code";
 
 const steps = [
@@ -27,6 +31,30 @@ export default function GuestBookPage() {
     const [agencyCategory, setAgencyCategory] = useState<string>("");
     const [trackingId, setTrackingId] = useState<string>("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [surveyRating, setSurveyRating] = useState(0);
+    const [surveyComment, setSurveyComment] = useState("");
+    const [surveySubmitted, setSurveySubmitted] = useState(false);
+    const [isSubmittingSurvey, setIsSubmittingSurvey] = useState(false);
+    const [isScanned, setIsScanned] = useState(false);
+
+    // Poll for scan status when on step 3
+    useEffect(() => {
+        if (currentStep !== 3 || !trackingId || isScanned) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const res = await fetch(`/api/guest-book/${trackingId}`);
+                const data = await res.json();
+                if (data.isScanned) {
+                    setIsScanned(true);
+                    toast.success("QR Code berhasil di-scan oleh petugas!");
+                    clearInterval(interval);
+                }
+            } catch { }
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, [currentStep, trackingId, isScanned]);
     const [formData, setFormData] = useState({
         name: "",
         email: "",
@@ -308,35 +336,207 @@ export default function GuestBookPage() {
                                             transition={{ duration: 0.4 }}
                                             className="flex flex-col items-center justify-center text-center py-8"
                                         >
-                                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 inline-block">
-                                                <QRCode
-                                                    value={trackingId ? `https://bwscalendar.com/lacak/${trackingId}` : "https://bwscalendar.com/"}
-                                                    size={160}
-                                                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-                                                    viewBox={`0 0 160 160`}
-                                                />
-                                            </div>
+                                            <AnimatePresence mode="wait">
+                                                {isScanned ? (
+                                                    <motion.div
+                                                        key="scanned"
+                                                        initial={{ scale: 0.5, opacity: 0 }}
+                                                        animate={{ scale: 1, opacity: 1 }}
+                                                        transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                                                        className="bg-green-50 p-6 rounded-2xl shadow-sm border border-green-200 mb-6 inline-flex flex-col items-center gap-3"
+                                                    >
+                                                        <motion.div
+                                                            initial={{ scale: 0 }}
+                                                            animate={{ scale: 1 }}
+                                                            transition={{ type: "spring", stiffness: 300, delay: 0.2 }}
+                                                            className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center"
+                                                        >
+                                                            <CheckCircle className="w-10 h-10 text-green-600" />
+                                                        </motion.div>
+                                                        <p className="text-sm font-semibold text-green-700">Terverifikasi oleh Petugas</p>
+                                                    </motion.div>
+                                                ) : (
+                                                    <motion.div
+                                                        key="qrcode"
+                                                        exit={{ scale: 0.5, opacity: 0 }}
+                                                        className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 inline-block relative"
+                                                    >
+                                                        <QRCode
+                                                            value={trackingId ? `https://bwscalendar.com/lacak/${trackingId}` : "https://bwscalendar.com/"}
+                                                            size={160}
+                                                            style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                                                            viewBox={`0 0 160 160`}
+                                                        />
+                                                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
+                                                            <span className="flex items-center gap-1 text-[10px] text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100 shadow-sm">
+                                                                <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
+                                                                Menunggu scan petugas...
+                                                            </span>
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
 
-                                            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">Buku Tamu Berhasil Diisi!</h2>
+                                            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">
+                                                {isScanned ? "Kunjungan Terverifikasi!" : "Buku Tamu Berhasil Diisi!"}
+                                            </h2>
                                             <p className="text-gray-600 max-w-sm mb-6 mx-auto">
-                                                Tunjukkan QR Code ini kepada petugas atau satpam di lokasi sebagai bukti pengisian buku tamu digital.
+                                                {isScanned
+                                                    ? "QR Code Anda sudah berhasil di-scan oleh petugas. Selamat datang!"
+                                                    : "Tunjukkan QR Code ini kepada petugas atau satpam di lokasi sebagai bukti pengisian buku tamu digital."
+                                                }
                                             </p>
-                                            <div className="bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 mb-8">
+                                            <div className="bg-gray-50 border border-gray-100 rounded-lg px-4 py-3 mb-6">
                                                 <p className="text-xs text-gray-500 mb-1">ID Kunjungan</p>
                                                 <p className="font-mono font-bold text-gray-800 tracking-wider">{trackingId || "BWS-DDMMYY-XXX"}</p>
                                             </div>
 
-                                            <Button
-                                                onClick={() => {
-                                                    setFormData({ name: "", email: "", nik: "", agencyName: "", phone: "", subject: "", description: "" });
-                                                    setAgencyCategory("");
-                                                    setTrackingId("");
-                                                    setCurrentStep(1);
-                                                }}
-                                                className="h-11 px-8 rounded-md"
-                                            >
-                                                Isi Form Baru
-                                            </Button>
+                                            {/* Survey Section - only shows after QR is scanned */}
+                                            {isScanned && (<div className={cn(
+                                                "w-full border-2 rounded-2xl p-6 mb-6 transition-all duration-500 relative overflow-hidden",
+                                                surveySubmitted ? "border-green-100 bg-green-50/30" : "border-blue-100 bg-gradient-to-br from-white to-blue-50/50"
+                                            )}>
+                                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+
+                                                {surveySubmitted ? (
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center justify-center gap-2 mb-2">
+                                                            <div className={cn(
+                                                                "p-1.5 rounded-full",
+                                                                surveyRating < 3 ? "bg-orange-100 text-orange-600" : "bg-green-100 text-green-600"
+                                                            )}>
+                                                                <CheckCircle className="w-4 h-4" />
+                                                            </div>
+                                                            <h3 className="font-bold text-gray-800">
+                                                                {surveyRating < 3 ? "Mohon Maaf" : "Terima Kasih!"}
+                                                            </h3>
+                                                        </div>
+                                                        <p className="text-sm text-gray-600">
+                                                            {surveyRating < 3
+                                                                ? "Mohon maaf atas ketidaknyamanan Anda. Masukan Anda akan kami jadikan bahan evaluasi perbaikan layanan."
+                                                                : "Terima kasih atas penilaian dan kepercayaan Anda menggunakan layanan kami."
+                                                            }
+                                                        </p>
+                                                        <div className="flex flex-col gap-1 bg-white/60 p-3 rounded-lg border border-black/5 mt-3">
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                                    <Star
+                                                                        key={star}
+                                                                        className={cn(
+                                                                            "w-4 h-4",
+                                                                            star <= surveyRating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                                                                        )}
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                            {surveyComment && (
+                                                                <p className="text-sm text-gray-700 italic mt-1">
+                                                                    "{surveyComment}"
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-4">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <div className="p-1.5 bg-blue-100 rounded-full text-blue-600">
+                                                                <Star className="w-4 h-4" />
+                                                            </div>
+                                                            <h3 className="font-bold text-gray-800">Survei Kepuasan</h3>
+                                                        </div>
+                                                        <p className="text-sm text-gray-500">
+                                                            Bagaimana pengalaman Anda?
+                                                        </p>
+
+                                                        <div className="flex flex-col items-center gap-2 py-2">
+                                                            <Rating
+                                                                value={surveyRating}
+                                                                onValueChange={setSurveyRating}
+                                                                className="gap-2"
+                                                            >
+                                                                {[1, 2, 3, 4, 5].map((index) => (
+                                                                    <RatingButton
+                                                                        key={index}
+                                                                        index={index}
+                                                                        className={cn(
+                                                                            "w-8 h-8 transition-all hover:scale-110",
+                                                                            index + 1 <= surveyRating ? "text-yellow-400 fill-yellow-300" : "text-yellow-300"
+                                                                        )}
+                                                                    />
+                                                                ))}
+                                                            </Rating>
+                                                            <span className="text-xs font-medium text-gray-400">
+                                                                {surveyRating === 0 ? "Pilih bintang" :
+                                                                    surveyRating === 5 ? "Sangat Puas! 😍" :
+                                                                        surveyRating === 4 ? "Puas 😊" :
+                                                                            surveyRating === 3 ? "Cukup 🙂" :
+                                                                                surveyRating === 2 ? "Kurang 😐" : "Sangat Kurang 😞"
+                                                                }
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            <Textarea
+                                                                placeholder="Berikan komentar dan masukan Anda . . ."
+                                                                value={surveyComment}
+                                                                onChange={(e) => setSurveyComment(e.target.value)}
+                                                                className="resize-none bg-white/80 min-h-[80px] text-sm"
+                                                            />
+                                                        </div>
+
+                                                        <Button
+                                                            onClick={async () => {
+                                                                if (surveyRating === 0) {
+                                                                    toast.error("Mohon berikan penilaian bintang");
+                                                                    return;
+                                                                }
+                                                                setIsSubmittingSurvey(true);
+                                                                try {
+                                                                    const response = await fetch("/api/surveys", {
+                                                                        method: "POST",
+                                                                        headers: { "Content-Type": "application/json" },
+                                                                        body: JSON.stringify({
+                                                                            trackingId,
+                                                                            rating: surveyRating,
+                                                                            comment: surveyComment
+                                                                        })
+                                                                    });
+                                                                    const data = await response.json();
+                                                                    if (!response.ok) throw new Error(data.error || "Gagal mengirim survei");
+
+                                                                    toast.success(surveyRating < 3
+                                                                        ? "Mohon maaf atas ketidaknyamanan Anda. Masukan Anda akan kami jadikan bahan evaluasi."
+                                                                        : "Terima kasih atas penilaian Anda!"
+                                                                    );
+                                                                    setSurveySubmitted(true);
+                                                                } catch (err: any) {
+                                                                    toast.error(err.message);
+                                                                } finally {
+                                                                    setIsSubmittingSurvey(false);
+                                                                }
+                                                            }}
+                                                            disabled={surveyRating === 0 || isSubmittingSurvey}
+                                                            className="w-full relative overflow-hidden group h-9"
+                                                            size="sm"
+                                                        >
+                                                            <span className={cn(
+                                                                "flex items-center gap-2 transition-all",
+                                                                isSubmittingSurvey ? "opacity-0" : "opacity-100"
+                                                            )}>
+                                                                <Send className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                                                                Kirim Survei
+                                                            </span>
+                                                            {isSubmittingSurvey && (
+                                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                                </div>
+                                                            )}
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>)}
+
+
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
