@@ -63,7 +63,7 @@ export default function DashboardLayout({
             <Sidebar />
 
             {/* Main Content Area */}
-            <main className="relative z-10 pt-[88px] pb-4 pr-4 pl-[112px] min-h-screen lg:pl-[112px]">
+            <main className="relative z-10 pt-[88px] pb-4 px-4 lg:pr-4 lg:pl-[224px] min-h-screen">
                 <div className="relative h-full min-h-[calc(100vh-104px)] rounded-[24px] border border-yellow-200/70 bg-white/60 backdrop-blur-sm shadow-xl overflow-hidden">
 
 

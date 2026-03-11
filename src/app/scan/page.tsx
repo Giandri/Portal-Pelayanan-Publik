@@ -9,11 +9,12 @@ import { Html5Qrcode } from "html5-qrcode";
 import { toast } from "sonner";
 import { Toaster } from "sonner";
 import { useRouter } from "next/navigation";
-import { markGuestBookScanned } from "@/app/actions/guest-book";
+import { markGuestBookScanned, getGuestBookByTrackingId } from "@/app/actions/guest-book";
 
 export default function ScanPage() {
-    const [scanResult, setScanResult] = useState<string | null>(null);
+    const [scanResult, setScanResult] = useState<any | null>(null);
     const [isScanning, setIsScanning] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [cameraError, setCameraError] = useState<string | null>(null);
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const router = useRouter();
@@ -67,9 +68,14 @@ export default function ScanPage() {
 
                 await scannerRef.current.start(
                     backCam ? backCam.id : cameras[0].id,
-                    { fps: 10, qrbox: { width: 250, height: 250 } },
-                    (decodedText: string) => {
+                    {
+                        fps: 15,
+                        disableFlip: false
+                    },
+                    async (decodedText: string) => {
                         if (cancelled) return;
+
+                        setIsLoading(true);
 
                         // Parse QR code - extract tracking ID from buku tamu URL
                         let parsedId = decodedText;
@@ -78,8 +84,14 @@ export default function ScanPage() {
                             parsedId = lacakMatch[1];
                         }
 
-                        setScanResult(parsedId);
+                        // Fetch detailed guest information
+                        const guestData = await getGuestBookByTrackingId(parsedId);
+
+                        if (cancelled) return;
+
+                        setScanResult(guestData || { trackingId: parsedId });
                         setIsScanning(false);
+                        setIsLoading(false);
                         toast.success("QR Code buku tamu berhasil dipindai!");
 
                         // Mark as scanned in database if it's a BWS tracking ID
@@ -129,85 +141,52 @@ export default function ScanPage() {
     };
 
     return (
-        <div className="min-h-screen relative overflow-hidden flex flex-col">
+        <div className="h-screen max-h-screen relative overflow-hidden flex flex-col">
             <Toaster position="top-center" richColors />
 
-            {/* Background matching portal-admin / admin-menu */}
-            <div className="fixed inset-0 z-0">
-                <div className="absolute inset-0 bg-white" />
-                <Image
-                    src="/images/bg-3.jpg"
-                    alt=""
-                    fill
-                    className="object-cover opacity-[0.8] mix-blend-multiply object-bottom"
-                />
-                <div
-                    className="absolute inset-0 opacity-[0.03]"
-                    style={{
-                        backgroundImage: `
-                            linear-gradient(rgba(250,204,21,0.4) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(250,204,21,0.4) 1px, transparent 1px)
-                        `,
-                        backgroundSize: "60px 60px",
-                    }}
-                />
-            </div>
+            {/* Full Screen Camera Background */}
+            <div
+                id="qr-reader"
+                className={`fixed inset-0 z-0 transition-opacity duration-500 ${isScanning ? "opacity-100" : "opacity-0 pointer-events-none"} [&_video]:object-contain [&_video]:w-full! [&_video]:h-full! [&_video]:m-0! [&_video]:p-0!`}
+            />
+
 
             {/* Header */}
-            <header className="relative z-20 bg-white/70 backdrop-blur-md border-b border-yellow-200/70 px-4 py-4 flex items-center shadow-sm">
+            <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScanning ? "bg-white/10 backdrop-blur-sm border-b border-white/10" : "bg-white/70 backdrop-blur-md border-b border-yellow-200/70"} px-4 py-4 flex items-center shadow-sm`}>
                 <Link
                     href="/admin-menu"
-                    className="p-2 -ml-2 hover:bg-blue-50 rounded-full transition-colors mr-3"
+                    className={`p-2 -ml-2 rounded-full transition-colors mr-3 ${isScanning ? "hover:bg-white/20 text-white" : "hover:bg-blue-50 text-blue-950"}`}
                 >
-                    <ArrowLeft className="w-5 h-5 text-blue-950" />
+                    <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <div>
-                    <h1 className="text-base font-extrabold text-blue-950 tracking-wide">SCAN QR CODE</h1>
-                    <p className="text-xs text-blue-950/50 font-bold tracking-wider">PINDAI QR CODE TAMU   </p>
+                    <h1 className={`text-base font-extrabold tracking-wide ${isScanning ? "text-white" : "text-blue-950"}`}>SCAN QR CODE</h1>
+                    <p className={`text-xs font-bold tracking-wider ${isScanning ? "text-white/70" : "text-blue-950/50"}`}>PINDAI QR CODE TAMU   </p>
                 </div>
             </header>
 
-            {/* Main Content */}
-            <main className="flex-1 flex flex-col items-center justify-center p-4 relative z-10">
-                <AnimatePresence mode="wait">
-                    {isScanning ? (
-                        <motion.div
-                            key="scanner"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            className="w-full max-w-sm flex flex-col items-center"
-                        >
-                            {/* Scanner Container */}
-                            <div className="w-full aspect-square rounded-[24px] overflow-hidden relative bg-black shadow-2xl border border-yellow-200/70">
-                                {/* Camera Feed Area */}
-                                <div id="qr-reader" className="w-full h-full [&>video]:object-cover [&>video]:w-full [&>video]:h-full"></div>
+            {/* Scanning UI (Fixed Overlay) */}
+            <AnimatePresence>
+                {isScanning && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-10 flex items-center justify-center pointer-events-none"
+                    >
+                        <div className="relative w-[70vw] h-[70vw] max-w-[280px] max-h-[280px] min-w-[200px] min-h-[200px] flex items-center justify-center">
+                            {/* Scanning Box Interior */}
+                            <div className="absolute inset-0 rounded-3xl overflow-hidden border border-white/20">
+                                {/* Corner Accents */}
+                                <div className="absolute top-0 left-0 w-10 h-10 border-t-[5px] border-l-[5px] border-yellow-400 rounded-tl-2xl" />
+                                <div className="absolute top-0 right-0 w-10 h-10 border-t-[5px] border-r-[5px] border-yellow-400 rounded-tr-2xl" />
+                                <div className="absolute bottom-0 left-0 w-10 h-10 border-b-[5px] border-l-[5px] border-yellow-400 rounded-bl-2xl" />
+                                <div className="absolute bottom-0 right-0 w-10 h-10 border-b-[5px] border-r-[5px] border-yellow-400 rounded-br-2xl" />
 
-                                {/* Custom Scan Overlay */}
-                                <div className="absolute inset-0 pointer-events-none z-10">
 
-
-                                    {/* Animated Scan Line */}
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="w-[250px] h-[250px] overflow-hidden relative">
-                                            <motion.div
-                                                initial={{ y: 0 }}
-                                                animate={{ y: [0, 244, 0] }}
-                                                transition={{
-                                                    duration: 2.5,
-                                                    repeat: Infinity,
-                                                    ease: "easeInOut",
-                                                }}
-                                                className="w-full h-[2px] bg-gradient-to-r from-transparent via-yellow-400 to-transparent shadow-[0_0_20px_rgba(250,204,21,0.6)]"
-                                            />
-                                        </div>
-                                    </div>
-
-                                </div>
-
-                                {/* Camera Error Overlay */}
+                                {/* Camera Error (Centered in box) */}
                                 {cameraError && (
-                                    <div className="absolute inset-0 z-20 bg-white/95 flex flex-col items-center justify-center px-6 text-center">
+                                    <div className="absolute inset-0 z-30 bg-white/95 flex flex-col items-center justify-center px-6 text-center pointer-events-auto">
                                         <Camera className="w-12 h-12 text-blue-950/30 mb-4" />
                                         <p className="text-sm text-blue-950/70 font-medium mb-4">{cameraError}</p>
                                         <button
@@ -221,12 +200,38 @@ export default function ScanPage() {
                                 )}
                             </div>
 
-                            <div className="mt-6 flex items-center gap-2 text-blue-950/60">
-                                <ScanLine className="w-4 h-4 text-yellow-500" />
-                                <p className="text-sm font-medium">Arahkan kamera ke barcode / QR Code</p>
+                            {/* Floating Labels (Inside/Near the box area) */}
+                            <div className="absolute -bottom-24 left-1/2 -translate-x-1/2 w-max flex flex-col items-center gap-4">
+                                <div className="flex items-center gap-3 bg-blue-950/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/10 text-white shadow-xl">
+                                    <ScanLine className="w-5 h-5 text-yellow-400 animate-pulse" />
+                                    <p className="text-sm font-bold tracking-wide uppercase">Scanning QR Code...</p>
+                                </div>
+                                <p className="text-white/60 text-xs font-medium bg-black/20 backdrop-blur-sm px-4 py-1 rounded-full border border-white/5">
+                                    Arahkan kode ke dalam kotak scan
+                                </p>
                             </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Main Content (Results & Loading) */}
+            <main className="flex-1 flex flex-col items-center justify-center p-4 relative z-20">
+                <AnimatePresence mode="wait">
+                    {isLoading && (
+                        <motion.div
+                            key="loading"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="bg-white/80 backdrop-blur-md rounded-[24px] border border-yellow-200/70 p-8 text-center shadow-2xl flex flex-col items-center"
+                        >
+                            <div className="w-12 h-12 border-4 border-blue-950/20 border-t-blue-950 rounded-full animate-spin mb-4" />
+                            <p className="text-blue-950 font-bold">Mengambil data...</p>
                         </motion.div>
-                    ) : (
+                    )}
+
+                    {!isScanning && !isLoading && (
                         <motion.div
                             key="result"
                             initial={{ opacity: 0, scale: 0.9 }}
@@ -247,21 +252,48 @@ export default function ScanPage() {
 
                                 <h2 className="text-xl font-extrabold text-blue-950 mb-1">Scan Berhasil!</h2>
                                 <p className="text-sm text-blue-950/50 mb-6">
-                                    ID kunjungan buku tamu terdeteksi:
+                                    Detail kunjungan tamu:
                                 </p>
 
-                                <div className="bg-blue-950/5 border border-blue-950/10 rounded-2xl p-4 mb-8">
-                                    <p className="text-xs text-blue-950/40 font-medium mb-1">ID Kunjungan</p>
-                                    <p className="font-mono font-bold text-lg text-blue-950 break-all">
-                                        {scanResult}
-                                    </p>
+                                <div className="space-y-4 mb-8">
+                                    {/* Name Result */}
+                                    <div className="bg-blue-950/5 border border-blue-950/10 rounded-2xl p-4 text-left">
+                                        <p className="text-[10px] text-blue-950/40 font-bold uppercase tracking-wider mb-1">Nama Tamu</p>
+                                        <p className="font-bold text-blue-950">
+                                            {scanResult?.name || "-"}
+                                        </p>
+                                    </div>
+
+                                    {/* Agency Result */}
+                                    <div className="bg-blue-950/5 border border-blue-950/10 rounded-2xl p-4 text-left">
+                                        <p className="text-[10px] text-blue-950/40 font-bold uppercase tracking-wider mb-1">Instansi</p>
+                                        <p className="font-bold text-blue-950">
+                                            {scanResult?.agencyName || "-"}
+                                        </p>
+                                    </div>
+
+                                    {/* Subject/Target Result */}
+                                    <div className="bg-blue-950/5 border border-blue-950/10 rounded-2xl p-4 text-left">
+                                        <p className="text-[10px] text-blue-950/40 font-bold uppercase tracking-wider mb-1">Tujuan / Subjek</p>
+                                        <p className="font-bold text-blue-950">
+                                            {scanResult?.subject || "-"}
+                                        </p>
+                                    </div>
+
+                                    {/* Tracking ID (Small) */}
+                                    <div className="bg-blue-950/5 border border-blue-950/10 rounded-xl p-3 flex justify-between items-center">
+                                        <p className="text-[10px] text-blue-950/40 font-bold uppercase">ID Tracking</p>
+                                        <p className="font-mono text-xs font-bold text-blue-950/60">
+                                            {scanResult?.trackingId}
+                                        </p>
+                                    </div>
                                 </div>
 
                                 <div className="flex flex-col gap-3">
                                     <button
                                         onClick={() => {
-                                            if (scanResult) {
-                                                router.push(`/dashboard?search=${scanResult}`);
+                                            if (scanResult?.trackingId) {
+                                                router.push(`/dashboard?search=${scanResult.trackingId}`);
                                             }
                                         }}
                                         className="w-full bg-blue-950 hover:bg-blue-900 text-white font-bold py-3.5 px-4 rounded-xl transition-colors shadow-lg shadow-blue-950/20 flex items-center justify-center gap-2"
@@ -279,17 +311,19 @@ export default function ScanPage() {
                                     </button>
                                 </div>
                             </div>
+
                         </motion.div>
                     )}
                 </AnimatePresence>
             </main>
 
+
             {/* Footer */}
-            <div className="relative z-10 text-center pb-4">
-                <p className="text-xs text-blue-900/40 font-medium">
+            <footer className="fixed bottom-0 left-0 right-0 z-50 text-center pb-4 pointer-events-none">
+                <p className={`text-xs font-medium transition-colors duration-500 ${isScanning ? "text-white/40" : "text-blue-900/40"}`}>
                     &copy; 2026 Balai Wilayah Sungai Bangka Belitung.
                 </p>
-            </div>
+            </footer>
         </div>
     );
 }

@@ -6,6 +6,7 @@ import type {
   DragEndEvent,
   DragOverEvent,
   DragStartEvent,
+  Modifier,
 } from "@dnd-kit/core";
 import {
   closestCenter,
@@ -67,6 +68,42 @@ export type KanbanBoardProps = {
   id: string;
   children: ReactNode;
   className?: string;
+};
+
+// Custom Modifier to snap DragOverlay to center of cursor
+const snapCenterToCursor: Modifier = ({
+    transform,
+    activatorEvent,
+    draggingNodeRect,
+}) => {
+    if (draggingNodeRect && activatorEvent) {
+        let x = 0;
+        let y = 0;
+
+        if (activatorEvent instanceof MouseEvent) {
+            x = activatorEvent.clientX;
+            y = activatorEvent.clientY;
+        } else if (typeof TouchEvent !== 'undefined' && activatorEvent instanceof TouchEvent && activatorEvent.touches.length > 0) {
+            x = activatorEvent.touches[0].clientX;
+            y = activatorEvent.touches[0].clientY;
+        } else if ('clientX' in activatorEvent && 'clientY' in activatorEvent) {
+            x = (activatorEvent as any).clientX;
+            y = (activatorEvent as any).clientY;
+        } else {
+             return transform;
+        }
+
+        const offsetX = x - draggingNodeRect.left;
+        const offsetY = y - draggingNodeRect.top;
+
+        return {
+            ...transform,
+            x: transform.x + offsetX - draggingNodeRect.width / 2,
+            y: transform.y + offsetY - draggingNodeRect.height / 2,
+        };
+    }
+
+    return transform;
 };
 
 export const KanbanBoard = ({ id, children, className }: KanbanBoardProps) => {
@@ -331,7 +368,7 @@ export const KanbanProvider = <
         </div>
         {typeof window !== "undefined" &&
           createPortal(
-            <DragOverlay>
+            <DragOverlay modifiers={[snapCenterToCursor]}>
               <t.Out />
             </DragOverlay>,
             document.body

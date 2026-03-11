@@ -125,7 +125,6 @@ async function handleRequest(userId: string, skipProcessing: boolean) {
     return { skipped: true }
   }
   
-  // Fetch only when needed
   const userData = await fetchUserData(userId)
   return processUserData(userData)
 }

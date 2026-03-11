@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
     LayoutDashboard,
     FileStack,
@@ -12,21 +12,65 @@ import {
     X,
     Star,
     History as HistoryIcon,
+    BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import {
+    TreeProvider,
+    TreeView,
+    TreeNode,
+    TreeNodeTrigger,
+    TreeNodeContent,
+    TreeIcon,
+    TreeLabel,
+    TreeExpander
+} from "@/components/kibo-ui/tree";
 
-const sidebarLinks = [
-    { href: "/dashboard", icon: LayoutDashboard, label: "RINGKASAN" },
-    { href: "/dashboard/perizinan", icon: FileStack, label: "KELOLA\nPERIZINAN" },
-    { href: "/dashboard/data", icon: ClipboardList, label: "KELOLA\nDATA" },
-    { href: "/dashboard/profil", icon: UserCircle, label: "PROFIL\nPEMOHON" },
-    { href: "/dashboard/riwayat", icon: HistoryIcon, label: "RIWAYAT" },
-    { href: "/dashboard/surveys", icon: Star, label: "SURVEI\nKEPUASAN" },
+type NavItem = {
+    id: string;
+    label: string;
+    href?: string;
+    icon: any;
+    children?: NavItem[];
+};
+
+const navItems: NavItem[] = [
+    {
+        id: "dashboard-folder",
+        label: "DASHBOARD",
+        icon: LayoutDashboard,
+        children: [
+            { id: "/dashboard", href: "/dashboard", icon: LayoutDashboard, label: "Ringkasan" },
+            { id: "/dashboard/surveys", href: "/dashboard/surveys", icon: Star, label: "Survei Kepuasan" },
+            {
+                id: "pelayanan-data",
+                label: "PELAYANAN & DATA",
+                icon: FileStack,
+                children: [
+                    { id: "/dashboard/perizinan", href: "/dashboard/perizinan", icon: FileStack, label: "Kelola Perizinan" },
+                    { id: "/dashboard/data", href: "/dashboard/data", icon: ClipboardList, label: "Kelola File" },
+                    { id: "/dashboard/profil", href: "/dashboard/profil", icon: UserCircle, label: "Profil Pemohon Data" },
+                    { id: "/dashboard/riwayat", href: "/dashboard/riwayat", icon: HistoryIcon, label: "Riwayat Data" },
+                ]
+            },
+            {
+                id: "buku-tamu",
+                label: "BUKU TAMU",
+                icon: BookOpen,
+                children: [
+                    { id: "/dashboard/buku-tamu", href: "/dashboard/buku-tamu", icon: BookOpen, label: "Buku Tamu" },
+                ]
+            },
+
+
+        ]
+    },
 ];
 
 export function Sidebar() {
     const pathname = usePathname();
+    const router = useRouter();
     const [isMobileOpen, setIsMobileOpen] = useState(false);
 
     const isActive = (href: string) => {
@@ -34,12 +78,80 @@ export function Sidebar() {
         return pathname.startsWith(href);
     };
 
+    const activeIds = useMemo(() => {
+        const ids: string[] = [];
+
+        const findActive = (items: NavItem[]): boolean => {
+            let hasActiveChild = false;
+            for (const item of items) {
+                if (item.href && isActive(item.href)) {
+                    ids.push(item.id);
+                    hasActiveChild = true;
+                }
+                if (item.children) {
+                    if (findActive(item.children)) {
+                        ids.push(item.id);
+                        hasActiveChild = true;
+                    }
+                }
+            }
+            return hasActiveChild;
+        };
+
+        findActive(navItems);
+        return ids;
+    }, [pathname]);
+
+    const renderNavItem = (item: NavItem) => {
+        if (item.children) {
+            return (
+                <TreeNode key={item.id} nodeId={item.id}>
+                    <TreeNodeTrigger className="mb-1 pointer-events-none hover:bg-transparent">
+                        <TreeExpander hasChildren className="pointer-events-auto" />
+                        <TreeIcon icon={<item.icon className="w-4 h-4 text-blue-950/40" />} />
+                        <TreeLabel className="text-[10px] font-black tracking-widest text-blue-950/40 ml-1">
+                            {item.label}
+                        </TreeLabel>
+                    </TreeNodeTrigger>
+                    <TreeNodeContent hasChildren>
+                        {item.children.map(renderNavItem)}
+                    </TreeNodeContent>
+                </TreeNode>
+            );
+        }
+
+        const active = isActive(item.href!);
+        return (
+            <TreeNode key={item.id} nodeId={item.id}>
+                <TreeNodeTrigger
+                    onClick={() => {
+                        router.push(item.href!);
+                        setIsMobileOpen(false);
+                    }}
+                    className={cn(
+                        "mb-1",
+                        active
+                            ? "bg-blue-950 text-yellow-400 hover:bg-blue-900"
+                            : "text-slate-600 hover:bg-yellow-50 hover:text-blue-950"
+                    )}
+                >
+                    <TreeIcon
+                        icon={<item.icon className={cn("w-4 h-4", active ? "text-yellow-400" : "text-slate-400")} />}
+                    />
+                    <TreeLabel className={cn("text-[13px] font-medium", active && "font-bold text-yellow-400")}>
+                        {item.label}
+                    </TreeLabel>
+                </TreeNodeTrigger>
+            </TreeNode>
+        );
+    };
+
     return (
         <>
             {/* Mobile Toggle */}
             <button
                 onClick={() => setIsMobileOpen(!isMobileOpen)}
-                className="fixed top-5 left-4 z-50 lg:hidden p-2 rounded-lg bg-white/90 shadow-md border border-gray-200"
+                className="fixed top-5 right-4 z-50 lg:hidden p-2 rounded-sm bg-white/90 shadow-md border border-gray-200"
             >
                 {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -55,44 +167,33 @@ export function Sidebar() {
             {/* Sidebar */}
             <aside
                 className={cn(
-                    "fixed left-4 top-[88px] bottom-4 w-[88px] z-40 transition-transform lg:translate-x-0",
+                    "fixed left-4 top-[88px] bottom-4 w-44 z-40 transition-transform lg:translate-x-0",
                     isMobileOpen ? "translate-x-0" : "-translate-x-[120%]"
                 )}
             >
-                <div className="h-full flex flex-col bg-white/70 backdrop-blur-xl rounded-[28px] border border-yellow-200/80 shadow-lg overflow-hidden">
+                <div className="h-full flex flex-col bg-white/70 backdrop-blur-xl rounded-lg border border-yellow-200/80 shadow-lg overflow-hidden py-5">
                     {/* Navigation */}
-                    <nav className="flex-1 flex flex-col items-center pt-3 pb-2 gap-1 px-2">
-                        {sidebarLinks.map((link) => {
-                            const active = isActive(link.href);
-                            return (
-                                <Link
-                                    key={link.href}
-                                    href={link.href}
-                                    onClick={() => setIsMobileOpen(false)}
-                                    className={cn(
-                                        "w-full flex flex-col items-center gap-1 py-3 px-1 rounded-2xl text-center transition-all duration-200",
-                                        active
-                                            ? "bg-blue-950 text-yellow-400 shadow-md"
-                                            : "text-gray-500 hover:bg-yellow-50 hover:text-blue-950"
-                                    )}
-                                >
-                                    <link.icon className={cn("w-6 h-6", active ? "text-yellow-400" : "text-gray-500")} />
-                                    <span className="text-[9px] font-bold leading-tight whitespace-pre-line tracking-wide">
-                                        {link.label}
-                                    </span>
-                                </Link>
-                            );
-                        })}
-                    </nav>
+                    <div className="flex-1 overflow-y-auto px-2 custom-scrollbar">
+                        <TreeProvider
+                            defaultExpandedIds={["dashboard-folder", "pelayanan-data"]}
+                            selectedIds={activeIds}
+                            indent={12}
+                            showLines={false}
+                        >
+                            <TreeView>
+                                {navItems.map(renderNavItem)}
+                            </TreeView>
+                        </TreeProvider>
+                    </div>
 
                     {/* Logout */}
-                    <div className="px-2 pb-4">
+                    <div className="px-4 pt-4 mt-auto border-t border-gray-100">
                         <Link
                             href="/"
-                            className="w-full flex flex-col items-center gap-1 py-3 px-1 rounded-2xl text-center text-red-500 hover:bg-red-50 transition-all duration-200"
+                            className="flex items-center gap-3 py-2.5 px-3 rounded-xl text-red-500 hover:bg-red-50 transition-all duration-200 group"
                         >
-                            <LogOut className="w-5 h-5" />
-                            <span className="text-[9px] font-bold tracking-wide">KELUAR</span>
+                            <LogOut className="w-4 h-4 text-red-400 group-hover:text-red-600" />
+                            <span className="text-[13px] font-bold tracking-wide">KELUAR</span>
                         </Link>
                     </div>
                 </div>

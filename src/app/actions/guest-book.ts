@@ -81,3 +81,54 @@ export async function markGuestBookScanned(trackingId: string) {
         return { success: false };
     }
 }
+
+export async function getGuestBooks() {
+    try {
+        const entries = await db.guestBook.findMany({
+            include: {
+                survey: {
+                    select: {
+                        rating: true,
+                        comment: true,
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+            take: 200,
+        });
+
+        return entries.map((entry: any) => ({
+            id: entry.id,
+            trackingId: entry.trackingId,
+            name: entry.name,
+            email: entry.email,
+            nik: entry.nik,
+            agencyName: entry.agencyName,
+            agencyCategory: entry.agencyCategory,
+            phone: entry.phone,
+            subject: entry.subject,
+            description: entry.description,
+            isScanned: entry.isScanned,
+            createdAt: entry.createdAt,
+            survey: entry.survey ? {
+                rating: entry.survey.rating,
+                comment: entry.survey.comment,
+            } : null,
+        }));
+    } catch (error) {
+        console.error("Failed to fetch guest books:", error);
+        return [];
+    }
+}
+
+export async function deleteGuestBook(id: string) {
+    try {
+        await db.guestBook.delete({ where: { id } });
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to delete guest book entry:", error);
+        return { success: false, error: "Gagal menghapus data" };
+    }
+}

@@ -1,20 +1,34 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { History, Search, FileText, CheckCircle2, AlertTriangle, User, Calendar, ExternalLink } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { History, Search, Calendar, ExternalLink, Trash2 } from "lucide-react";
 import { Permit } from "@/lib/types";
 import { statusConfig, permitTypes } from "@/lib/constants";
-import { formatDate, cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/lib/utils";
+import { Card, CardContent, CardHeader, } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Expandable, ExpandableTrigger, ExpandableContent } from "@/components/ui/expandable";
+
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogClose
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 import Link from "next/link";
 
 export default function RiwayatPage() {
-    // Fetch all permits without Kanban filter (so completed 24h+ won't be hidden)
+    const queryClient = useQueryClient();
+
+
     const { data: permits = [], isLoading } = useQuery<Permit[]>({
         queryKey: ['permits', 'history'],
         queryFn: async () => {
@@ -22,6 +36,24 @@ export default function RiwayatPage() {
             if (!response.ok) throw new Error("Failed to fetch");
             return response.json();
         }
+    });
+
+    // Delete Mutation
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
+            const response = await fetch(`/api/permits/${id}`, {
+                method: "DELETE",
+            });
+            if (!response.ok) throw new Error("Failed to delete permit");
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["permits"] });
+            toast.success("Riwayat berhasil dihapus");
+        },
+        onError: () => {
+            toast.error("Gagal menghapus riwayat permohonan");
+        },
     });
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -105,15 +137,16 @@ export default function RiwayatPage() {
                 <div className="overflow-x-auto">
                     <div className="w-full min-w-[1100px] flex flex-col">
                         {/* Header */}
-                        <div className="grid grid-cols-[60px_160px_minmax(200px,1fr)_minmax(200px,1fr)_160px_160px_140px_100px] bg-blue-950/5 border-b border-gray-100">
-                            <div className="text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-4 py-4 text-center">No.</div>
-                            <div className="text-left text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-4 py-4">No. Lacak</div>
-                            <div className="text-left text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-4 py-4">Pemohon</div>
-                            <div className="text-left text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-4 py-4">Perihal</div>
-                            <div className="text-left text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-4 py-4">Jenis</div>
-                            <div className="text-left text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-4 py-4">Tanggal</div>
-                            <div className="text-left text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-4 py-4">Status</div>
-                            <div className="text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-4 py-4 text-right">Aksi</div>
+                        <div className="flex bg-blue-950/5 border-b border-gray-100">
+                            <div className="w-[50px] shrink-0 text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-2 py-4 text-center">No.</div>
+                            <div className="w-[180px] shrink-0 text-left text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-2 py-4">No. Lacak</div>
+                            <div className="w-[240px] shrink-0 text-left text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-4 py-4">Pemohon</div>
+                            <div className="w-[190px] shrink-0 text-left text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-4 py-4">Jenis</div>
+                            <div className="w-[180px] shrink-0 text-left text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-4 py-4">Tanggal</div>
+                            <div className="w-[180px] shrink-0 text-left text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-4 py-4">Status</div>
+                            <div className="w-[140px] shrink-0 text-xs font-semibold text-blue-950/60 uppercase tracking-wider px-4 py-4 text-left">Aksi</div>
+                            {/* Sisa ruang kosong biarkan fill ke kanan tanpa menggeser aksi */}
+                            <div className="flex-1"></div>
                         </div>
 
                         {/* Body */}
@@ -129,14 +162,14 @@ export default function RiwayatPage() {
                                     return (
                                         <Expandable key={permit.id} expandDirection="vertical" className="border-b border-gray-100 last:border-0 hover:bg-blue-50/20 transition-colors w-full">
                                             <ExpandableTrigger className="w-full block! text-left relative focus:outline-none focus:bg-blue-50/40">
-                                                <div className="grid grid-cols-[60px_160px_minmax(200px,1fr)_minmax(200px,1fr)_160px_160px_140px_100px] items-center w-full min-h-[72px]">
-                                                    <div className="px-4 py-4 text-center h-full flex items-center justify-center">
+                                                <div className="flex items-center w-full min-h-[72px]">
+                                                    <div className="w-[50px] shrink-0 px-2 py-4 text-center h-full flex items-center justify-center">
                                                         <span className="text-sm text-gray-500 font-medium">{index + 1}</span>
                                                     </div>
-                                                    <div className="px-4 py-4 h-full flex items-center">
+                                                    <div className="w-[180px] shrink-0 px-2 py-4 h-full flex items-center">
                                                         <span className="font-mono text-xs font-semibold text-gray-500">{permit.trackingId}</span>
                                                     </div>
-                                                    <div className="px-4 py-4 h-full flex items-center">
+                                                    <div className="w-[240px] shrink-0 px-4 py-4 h-full flex items-center">
                                                         <div className="w-full overflow-hidden">
                                                             <p className="text-sm font-medium text-gray-800 truncate">{permit.applicantName}</p>
                                                             <p className="text-xs text-gray-400 truncate mt-0.5">{permit.applicantEmail}</p>
@@ -145,12 +178,7 @@ export default function RiwayatPage() {
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <div className="px-4 py-4 h-full flex items-center">
-                                                        <p className="text-sm text-gray-700 line-clamp-2" title={permit.subject}>
-                                                            {permit.subject}
-                                                        </p>
-                                                    </div>
-                                                    <div className="px-4 py-4 h-full flex items-center">
+                                                    <div className="w-[190px] shrink-0 px-4 py-4 h-full flex items-center">
                                                         <span
                                                             className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full truncate max-w-[140px]"
                                                             style={{ backgroundColor: pType?.bgColor, color: pType?.color }}
@@ -158,13 +186,13 @@ export default function RiwayatPage() {
                                                             {pType?.title || permit.type}
                                                         </span>
                                                     </div>
-                                                    <div className="px-4 py-4 h-full flex items-center">
+                                                    <div className="w-[180px] shrink-0 px-4 py-4 h-full flex items-center">
                                                         <div className="flex items-center gap-1.5 text-xs text-gray-500">
                                                             <Calendar className="w-3.5 h-3.5 shrink-0" />
                                                             <span className="truncate">{formatDate(permit.createdAt)}</span>
                                                         </div>
                                                     </div>
-                                                    <div className="px-4 py-4 h-full flex items-center">
+                                                    <div className="w-[180px] shrink-0 px-4 py-4 h-full flex items-center">
                                                         <span
                                                             className="inline-flex items-center text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap"
                                                             style={{ backgroundColor: statusConfig[permit.status].bgColor, color: statusConfig[permit.status].color }}
@@ -172,51 +200,98 @@ export default function RiwayatPage() {
                                                             {statusConfig[permit.status].label}
                                                         </span>
                                                     </div>
-                                                    <div className="px-4 py-4 text-right h-full flex items-center justify-end">
+                                                    <div className="w-[140px] shrink-0 px-2.5 py-4 text-left h-full flex items-center justify-start gap-1">
                                                         <div onClick={(e) => { e.stopPropagation(); }}>
                                                             <Link href={`/lacak/${permit.trackingId}`}>
-                                                                <Button variant="outline" size="sm" className="h-8 gap-2 hover:bg-blue-50 hover:text-blue-600 transition-colors border-gray-200 shadow-sm bg-white">
+                                                                <Button variant="outline" size="sm" className="gap-1.5 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all border-gray-200  bg-white font-medium text-[11px]">
                                                                     <ExternalLink className="w-3.5 h-3.5" />
-                                                                    <span className="hidden sm:inline">Detail</span>
+
                                                                 </Button>
                                                             </Link>
                                                         </div>
+                                                        <div onClick={(e) => { e.stopPropagation(); }}>
+                                                            <Dialog>
+                                                                <DialogTrigger asChild>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="gap-1.5 hover:bg-red-50 hover:text-red-600 transition-all border-gray-200 bg-white font-medium text-[11px] text-red-500"
+                                                                        disabled={deleteMutation.isPending}
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </Button>
+                                                                </DialogTrigger>
+                                                                <DialogContent onClick={(e) => e.stopPropagation()}>
+                                                                    <DialogHeader>
+                                                                        <DialogTitle>Konfirmasi Hapus Data</DialogTitle>
+                                                                        <DialogDescription>
+                                                                            Apakah Anda yakin ingin menghapus data riwayat ini secara permanen? Data yang telah dihapus tidak dapat dikembalikan.
+                                                                        </DialogDescription>
+                                                                    </DialogHeader>
+                                                                    <DialogFooter>
+                                                                        <DialogClose asChild>
+                                                                            <Button variant="outline">Batal</Button>
+                                                                        </DialogClose>
+                                                                        <Button
+                                                                            onClick={() => {
+                                                                                deleteMutation.mutate(permit.id);
+                                                                            }}
+                                                                            disabled={deleteMutation.isPending}
+                                                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                                                        >
+                                                                            {deleteMutation.isPending ? "Menghapus..." : "Hapus Riwayat"}
+                                                                        </Button>
+                                                                    </DialogFooter>
+                                                                </DialogContent>
+                                                            </Dialog>
+                                                        </div>
                                                     </div>
+                                                    {/* Sisa spacer di dalam Trigger */}
+                                                    <div className="flex-1 min-w-4 items-center"></div>
                                                 </div>
                                             </ExpandableTrigger>
 
                                             <ExpandableContent preset="fade" className="bg-blue-50/20 border-t border-gray-100">
                                                 <div className="py-3 px-10 text-[13px] text-gray-700">
-                                                    <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-x-12 w-full">
-                                                        {/* Info Singkat Baris 1 */}
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-gray-400 font-medium">Nama:</span>
-                                                            <span className="font-semibold">{permit.applicantName}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-gray-400 font-medium">NIK:</span>
-                                                            <span className="font-semibold">{permit.applicantNIK || '-'}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-gray-400 font-medium">Instansi:</span>
-                                                            <span className="font-semibold truncate max-w-[200px]" title={permit.agencyName || ''}>
-                                                                {permit.agencyName || '-'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-gray-400 font-medium">Telepon:</span>
-                                                            <span className="font-semibold">{permit.applicantPhone || '-'}</span>
+                                                    <div className="flex flex-col gap-3 w-full">
+                                                        {/* Info Pemohon */}
+                                                        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-x-12 w-full">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-gray-400 font-medium">Nama:</span>
+                                                                <span className="font-semibold">{permit.applicantName}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-gray-400 font-medium">NIK:</span>
+                                                                <span className="font-semibold">{permit.applicantNIK || '-'}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-gray-400 font-medium">Instansi:</span>
+                                                                <span className="font-semibold truncate max-w-[200px]" title={permit.agencyName || ''}>
+                                                                    {permit.agencyName || '-'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-gray-400 font-medium">Telepon:</span>
+                                                                <span className="font-semibold">{permit.applicantPhone || '-'}</span>
+                                                            </div>
                                                         </div>
 
-                                                        {/* Pemisah Vertikal (Desktop) & Horizontal (Mobile) */}
-                                                        <div className="hidden md:block w-px h-4 bg-gray-300"></div>
+                                                        <div className="hidden md:block w-full h-px bg-gray-200/60"></div>
 
-                                                        {/* Info Singkat Baris 2 (Catatan) */}
-                                                        <div className="flex flex-1 min-w-0">
-                                                            <span className="text-gray-400 font-medium shrink-0 mr-2">Catatan:</span>
-                                                            <span className="italic" title={permit.description || ''}>
-                                                                {permit.description || 'Tidak ada catatan.'}
-                                                            </span>
+                                                        {/* Info Perihal & Catatan */}
+                                                        <div className="flex flex-col md:flex-row gap-3 md:gap-x-12 w-full">
+                                                            <div className="flex flex-1 min-w-0">
+                                                                <span className="text-gray-400 font-medium shrink-0 mr-2">Perihal:</span>
+                                                                <span className="font-semibold text-gray-800" title={permit.subject || ''}>
+                                                                    {permit.subject || '-'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex flex-1 min-w-0">
+                                                                <span className="text-gray-400 font-medium shrink-0 mr-2">Catatan:</span>
+                                                                <span className="italic" title={permit.description || ''}>
+                                                                    {permit.description || 'Tidak ada catatan.'}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
