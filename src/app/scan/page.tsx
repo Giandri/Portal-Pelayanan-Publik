@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Toaster } from "sonner";
 import { useRouter } from "next/navigation";
 import { markGuestBookScanned, getGuestBookByTrackingId } from "@/app/actions/guest-book";
-import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
+import { BrowserMultiFormatReader, IScannerControls } from "@zxing/browser";
 
 export default function ScanPage() {
     const [scanResult, setScanResult] = useState<any | null>(null);
@@ -21,7 +21,7 @@ export default function ScanPage() {
 
     useEffect(() => {
         let active = true;
-        const codeReader = new BrowserQRCodeReader();
+        const codeReader = new BrowserMultiFormatReader();
 
         const startScanner = async () => {
             if (!videoRef.current) return;
@@ -61,7 +61,7 @@ export default function ScanPage() {
                 // Determine best back camera
                 let selectedDeviceId: string | undefined = undefined;
                 try {
-                    const videoInputDevices = await BrowserQRCodeReader.listVideoInputDevices();
+                    const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
                     if (videoInputDevices.length === 0) {
                         setCameraError("Tidak ada kamera yang terdeteksi.");
                         return;
@@ -70,7 +70,8 @@ export default function ScanPage() {
                         (device) =>
                             device.label.toLowerCase().includes("back") ||
                             device.label.toLowerCase().includes("environment") ||
-                            device.label.toLowerCase().includes("rear")
+                            device.label.toLowerCase().includes("rear") ||
+                            device.label.toLowerCase().includes("belakang")
                     );
                     selectedDeviceId = backCam ? backCam.deviceId : videoInputDevices[0].deviceId;
                 } catch (e) {
@@ -82,9 +83,14 @@ export default function ScanPage() {
                 const controls = await codeReader.decodeFromVideoDevice(
                     selectedDeviceId,
                     videoRef.current,
-                    (result, error, ctrls) => {
+                    (result: any, error: any, ctrls: any) => {
                         if (ctrls) {
                             controlsRef.current = ctrls;
+                        }
+
+                        // Log error explicitly to console for debugging if not NotFoundException
+                        if (error && error.name !== 'NotFoundException') {
+                            console.warn("Scan error:", error);
                         }
 
                         if (result && active) {
@@ -129,9 +135,9 @@ export default function ScanPage() {
             } catch (err: any) {
                 if (active) {
                     console.error("Camera error:", err);
-                    const msg = err?.name === "NotAllowedError" || err?.message.includes("Permission denied")
+                    const msg = err?.name === "NotAllowedError" || err?.message?.includes("Permission denied")
                         ? "Izin kamera ditolak. Buka pengaturan browser Anda dan izinkan akses kamera untuk situs ini."
-                        : err?.name === "NotFoundError" || err?.message.includes("Requested device not found")
+                        : err?.name === "NotFoundError" || err?.message?.includes("Requested device not found")
                             ? "Kamera belakang tidak ditemukan atau tidak tersedia di perangkat ini."
                             : "Gagal mengakses kamera. Pastikan Anda memberikan izin akses kamera dan menggunakan koneksi aman (HTTPS).";
                     setCameraError(msg);
