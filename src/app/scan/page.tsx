@@ -9,6 +9,7 @@ import { Toaster } from "sonner";
 import { useRouter } from "next/navigation";
 import { markGuestBookScanned, getGuestBookByTrackingId } from "@/app/actions/guest-book";
 import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
+import { DecodeHintType, BarcodeFormat } from "@zxing/library";
 
 export default function ScanPage() {
     const [scanResult, setScanResult] = useState<any | null>(null);
@@ -21,7 +22,15 @@ export default function ScanPage() {
 
     useEffect(() => {
         let active = true;
-        const codeReader = new BrowserQRCodeReader();
+        
+        const hints = new Map();
+        hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
+        hints.set(DecodeHintType.TRY_HARDER, true);
+
+        const codeReader = new BrowserQRCodeReader(hints, {
+            delayBetweenScanAttempts: 300,
+            delayBetweenScanSuccess: 1000,
+        });
 
         const startScanner = async () => {
             if (!videoRef.current) return;

@@ -24,6 +24,7 @@
     "@types/file-saver": "^2.0.7",
     "@uploadthing/react": "^7.3.3",
     "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
     "axios": "^1.13.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
