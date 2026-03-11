@@ -4,27 +4,30 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ScanLine, CheckCircle2, Camera, RefreshCw, Search } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
-import { Html5Qrcode } from "html5-qrcode";
 import { toast } from "sonner";
 import { Toaster } from "sonner";
 import { useRouter } from "next/navigation";
 import { markGuestBookScanned, getGuestBookByTrackingId } from "@/app/actions/guest-book";
+import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
 
 export default function ScanPage() {
     const [scanResult, setScanResult] = useState<any | null>(null);
     const [isScanning, setIsScanning] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const [cameraError, setCameraError] = useState<string | null>(null);
-    const scannerRef = useRef<Html5Qrcode | null>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const controlsRef = useRef<IScannerControls | null>(null);
     const router = useRouter();
 
     useEffect(() => {
-        let cancelled = false;
+        let active = true;
+        const codeReader = new BrowserQRCodeReader();
 
         const startScanner = async () => {
+            if (!videoRef.current) return;
+
             await new Promise((r) => setTimeout(r, 300));
-            if (cancelled) return;
+            if (!active) return;
 
             if (!window.isSecureContext) {
                 setCameraError(
@@ -34,82 +37,68 @@ export default function ScanPage() {
             }
 
             try {
-
-                let stream: MediaStream;
+                // Determine best back camera
+                let selectedDeviceId: string | undefined = undefined;
                 try {
-                    stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: { ideal: "environment" } },
-                    });
-                } catch {
-
-                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const videoInputDevices = await BrowserQRCodeReader.listVideoInputDevices();
+                    if (videoInputDevices.length === 0) {
+                        setCameraError("Tidak ada kamera yang terdeteksi.");
+                        return;
+                    }
+                    const backCam = videoInputDevices.find(
+                        (device) =>
+                            device.label.toLowerCase().includes("back") ||
+                            device.label.toLowerCase().includes("environment")
+                    );
+                    selectedDeviceId = backCam ? backCam.deviceId : videoInputDevices[0].deviceId;
+                } catch (e) {
+                    // Ignore error on listing devices, fallback to undefined (auto select)
                 }
 
-                stream.getTracks().forEach((track) => track.stop());
+                if (!active) return;
 
-                if (cancelled) return;
+                const controls = await codeReader.decodeFromVideoDevice(
+                    selectedDeviceId,
+                    videoRef.current,
+                    async (result, error, ctrls) => {
+                        if (ctrls) {
+                            controlsRef.current = ctrls;
+                        }
 
-                scannerRef.current = new Html5Qrcode("qr-reader");
+                        if (result && active) {
+                            // Stop scanning once we get a result
+                            active = false;
+                            if (controlsRef.current) {
+                                controlsRef.current.stop();
+                            }
 
-                const cameras = await Html5Qrcode.getCameras();
+                            setIsLoading(true);
 
-                if (!cameras || cameras.length === 0) {
-                    setCameraError("Tidak ada kamera yang terdeteksi.");
-                    return;
-                }
+                            const decodedText = result.getText();
+                            let parsedId = decodedText;
+                            const lacakMatch = decodedText.match(/\/lacak\/([A-Z0-9-]+)/i);
+                            if (lacakMatch) {
+                                parsedId = lacakMatch[1];
+                            }
 
-                const backCam = cameras.find(
-                    (c) =>
-                        c.label.toLowerCase().includes("back") ||
-                        c.label.toLowerCase().includes("environment")
+                            const guestData = await getGuestBookByTrackingId(parsedId);
+
+                            setScanResult(guestData || { trackingId: parsedId });
+                            setIsScanning(false);
+                            setIsLoading(false);
+                            toast.success("QR Code buku tamu berhasil dipindai!");
+
+                            if (parsedId.startsWith("BWS-")) {
+                                markGuestBookScanned(parsedId).catch(() => { });
+                            }
+                        }
+                    }
                 );
 
-                if (cancelled) return;
+                controlsRef.current = controls;
 
-                await scannerRef.current.start(
-                    backCam ? backCam.id : cameras[0].id,
-                    {
-                        fps: 15,
-                        disableFlip: false
-                    },
-                    async (decodedText: string) => {
-                        if (cancelled) return;
-
-                        setIsLoading(true);
-
-                        // Parse QR code - extract tracking ID from buku tamu URL
-                        let parsedId = decodedText;
-                        const lacakMatch = decodedText.match(/\/lacak\/([A-Z0-9-]+)/i);
-                        if (lacakMatch) {
-                            parsedId = lacakMatch[1];
-                        }
-
-                        // Fetch detailed guest information
-                        const guestData = await getGuestBookByTrackingId(parsedId);
-
-                        if (cancelled) return;
-
-                        setScanResult(guestData || { trackingId: parsedId });
-                        setIsScanning(false);
-                        setIsLoading(false);
-                        toast.success("QR Code buku tamu berhasil dipindai!");
-
-                        // Mark as scanned in database if it's a BWS tracking ID
-                        if (parsedId.startsWith("BWS-")) {
-                            markGuestBookScanned(parsedId).catch(() => { });
-                        }
-
-                        if (scannerRef.current?.isScanning) {
-                            scannerRef.current
-                                .stop()
-                                .then(() => scannerRef.current?.clear())
-                                .catch(() => { });
-                        }
-                    },
-                    () => { }
-                );
             } catch (err: any) {
-                if (!cancelled) {
+                if (active) {
                     console.error("Camera error:", err);
                     const msg = err?.name === "NotAllowedError"
                         ? "Izin kamera ditolak. Buka pengaturan browser Anda dan izinkan akses kamera untuk situs ini."
@@ -126,12 +115,9 @@ export default function ScanPage() {
         }
 
         return () => {
-            cancelled = true;
-            if (scannerRef.current?.isScanning) {
-                scannerRef.current
-                    .stop()
-                    .then(() => scannerRef.current?.clear())
-                    .catch(() => { });
+            active = false;
+            if (controlsRef.current) {
+                controlsRef.current.stop();
             }
         };
     }, [isScanning]);
@@ -144,12 +130,16 @@ export default function ScanPage() {
         <div className="h-screen max-h-screen relative overflow-hidden flex flex-col">
             <Toaster position="top-center" richColors />
 
-            {/* Full Screen Camera Background */}
-            <div
-                id="qr-reader"
-                className={`fixed inset-0 z-0 transition-opacity duration-500 ${isScanning ? "opacity-100" : "opacity-0 pointer-events-none"} [&_video]:object-contain [&_video]:w-full! [&_video]:h-full! [&_video]:m-0! [&_video]:p-0!`}
-            />
-
+            {/* Full Screen Camera Background - Universal Responsive */}
+            <div className={`fixed inset-0 z-0 bg-black transition-opacity duration-500 overflow-hidden flex items-center justify-center ${isScanning ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+                <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-[100vw] h-[100dvh] object-cover absolute top-0 left-0 m-0 p-0 pointer-events-none"
+                />
+            </div>
 
             {/* Header */}
             <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScanning ? "bg-white/10 backdrop-blur-sm border-b border-white/10" : "bg-white/70 backdrop-blur-md border-b border-yellow-200/70"} px-4 py-4 flex items-center shadow-sm`}>
@@ -183,7 +173,6 @@ export default function ScanPage() {
                                 <div className="absolute bottom-0 left-0 w-10 h-10 border-b-[5px] border-l-[5px] border-yellow-400 rounded-bl-2xl" />
                                 <div className="absolute bottom-0 right-0 w-10 h-10 border-b-[5px] border-r-[5px] border-yellow-400 rounded-br-2xl" />
 
-
                                 {/* Camera Error (Centered in box) */}
                                 {cameraError && (
                                     <div className="absolute inset-0 z-30 bg-white/95 flex flex-col items-center justify-center px-6 text-center pointer-events-auto">
@@ -201,15 +190,17 @@ export default function ScanPage() {
                             </div>
 
                             {/* Floating Labels (Inside/Near the box area) */}
-                            <div className="absolute -bottom-24 left-1/2 -translate-x-1/2 w-max flex flex-col items-center gap-4">
-                                <div className="flex items-center gap-3 bg-blue-950/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/10 text-white shadow-xl">
-                                    <ScanLine className="w-5 h-5 text-yellow-400 animate-pulse" />
-                                    <p className="text-sm font-bold tracking-wide uppercase">Scanning QR Code...</p>
+                            {(!cameraError) && (
+                                <div className="absolute -bottom-24 left-1/2 -translate-x-1/2 w-max flex flex-col items-center gap-4">
+                                    <div className="flex items-center gap-3 bg-blue-950/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/10 text-white shadow-xl">
+                                        <ScanLine className="w-5 h-5 text-yellow-400 animate-pulse" />
+                                        <p className="text-sm font-bold tracking-wide uppercase">Scanning QR Code...</p>
+                                    </div>
+                                    <p className="text-white/60 text-xs font-medium bg-black/20 backdrop-blur-sm px-4 py-1 rounded-full border border-white/5">
+                                        Arahkan kode ke dalam kotak scan
+                                    </p>
                                 </div>
-                                <p className="text-white/60 text-xs font-medium bg-black/20 backdrop-blur-sm px-4 py-1 rounded-full border border-white/5">
-                                    Arahkan kode ke dalam kotak scan
-                                </p>
-                            </div>
+                            )}
                         </div>
                     </motion.div>
                 )}
