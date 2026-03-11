@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Toaster } from "sonner";
 import { useRouter } from "next/navigation";
 import { markGuestBookScanned, getGuestBookByTrackingId } from "@/app/actions/guest-book";
-import { BrowserMultiFormatReader, IScannerControls } from "@zxing/browser";
+import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser";
 
 export default function ScanPage() {
     const [scanResult, setScanResult] = useState<any | null>(null);
@@ -21,7 +21,7 @@ export default function ScanPage() {
 
     useEffect(() => {
         let active = true;
-        const codeReader = new BrowserMultiFormatReader();
+        const codeReader = new BrowserQRCodeReader();
 
         const startScanner = async () => {
             if (!videoRef.current) return;
@@ -37,58 +37,38 @@ export default function ScanPage() {
             }
 
             try {
-                // Request camera permission explicitly first to ensure devices are labeled
-                let stream: MediaStream | null = null;
+                // Request camera explicitly with optimal constraints for QR scanning
+                // We limit resolution so the QR detection doesn't choke on 4K frames
+                let stream: MediaStream;
                 try {
                     stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: { ideal: "environment" } },
+                        video: {
+                            facingMode: { ideal: "environment" },
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        },
                     });
                 } catch (e) {
-                    try {
-                        stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    } catch (err) {
-                        // Ignore and let ZXing handle it if possible, but likely permission denied
-                    }
+                    // Fallback to simpler constraints if the advanced one fails
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: "environment" }
+                    });
                 }
 
-                // Stop the explicit stream tracks since we just wanted to trigger the permission prompt
-                if (stream) {
-                    stream.getTracks().forEach(track => track.stop());
+                if (!active) {
+                    stream.getTracks().forEach(t => t.stop());
+                    return;
                 }
 
-                if (!active) return;
-
-                // Determine best back camera
-                let selectedDeviceId: string | undefined = undefined;
-                try {
-                    const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
-                    if (videoInputDevices.length === 0) {
-                        setCameraError("Tidak ada kamera yang terdeteksi.");
-                        return;
-                    }
-                    const backCam = videoInputDevices.find(
-                        (device) =>
-                            device.label.toLowerCase().includes("back") ||
-                            device.label.toLowerCase().includes("environment") ||
-                            device.label.toLowerCase().includes("rear") ||
-                            device.label.toLowerCase().includes("belakang")
-                    );
-                    selectedDeviceId = backCam ? backCam.deviceId : videoInputDevices[0].deviceId;
-                } catch (e) {
-                    // Ignore error on listing devices, fallback to undefined (auto select)
-                }
-
-                if (!active) return;
-
-                const controls = await codeReader.decodeFromVideoDevice(
-                    selectedDeviceId,
+                const controls = await codeReader.decodeFromStream(
+                    stream,
                     videoRef.current,
-                    (result: any, error: any, ctrls: any) => {
+                    (result, error, ctrls) => {
                         if (ctrls) {
                             controlsRef.current = ctrls;
                         }
 
-                        // Log error explicitly to console for debugging if not NotFoundException
+                        // Ignore Not Found errors as they just mean "no QR detected in this frame"
                         if (error && error.name !== 'NotFoundException') {
                             console.warn("Scan error:", error);
                         }
@@ -98,6 +78,8 @@ export default function ScanPage() {
                             active = false;
                             if (controlsRef.current) {
                                 controlsRef.current.stop();
+                            } else {
+                                stream.getTracks().forEach(t => t.stop());
                             }
 
                             setIsLoading(true);
