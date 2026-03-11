@@ -37,6 +37,27 @@ export default function ScanPage() {
             }
 
             try {
+                // Request camera permission explicitly first to ensure devices are labeled
+                let stream: MediaStream | null = null;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: { ideal: "environment" } },
+                    });
+                } catch (e) {
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    } catch (err) {
+                        // Ignore and let ZXing handle it if possible, but likely permission denied
+                    }
+                }
+
+                // Stop the explicit stream tracks since we just wanted to trigger the permission prompt
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+
+                if (!active) return;
+
                 // Determine best back camera
                 let selectedDeviceId: string | undefined = undefined;
                 try {
@@ -48,7 +69,8 @@ export default function ScanPage() {
                     const backCam = videoInputDevices.find(
                         (device) =>
                             device.label.toLowerCase().includes("back") ||
-                            device.label.toLowerCase().includes("environment")
+                            device.label.toLowerCase().includes("environment") ||
+                            device.label.toLowerCase().includes("rear")
                     );
                     selectedDeviceId = backCam ? backCam.deviceId : videoInputDevices[0].deviceId;
                 } catch (e) {
@@ -60,7 +82,7 @@ export default function ScanPage() {
                 const controls = await codeReader.decodeFromVideoDevice(
                     selectedDeviceId,
                     videoRef.current,
-                    async (result, error, ctrls) => {
+                    (result, error, ctrls) => {
                         if (ctrls) {
                             controlsRef.current = ctrls;
                         }
@@ -81,16 +103,23 @@ export default function ScanPage() {
                                 parsedId = lacakMatch[1];
                             }
 
-                            const guestData = await getGuestBookByTrackingId(parsedId);
+                            // Call server action without blocking the synchronous callback
+                            getGuestBookByTrackingId(parsedId).then((guestData) => {
+                                setScanResult(guestData || { trackingId: parsedId });
+                                setIsScanning(false);
+                                setIsLoading(false);
+                                toast.success("QR Code buku tamu berhasil dipindai!");
 
-                            setScanResult(guestData || { trackingId: parsedId });
-                            setIsScanning(false);
-                            setIsLoading(false);
-                            toast.success("QR Code buku tamu berhasil dipindai!");
-
-                            if (parsedId.startsWith("BWS-")) {
-                                markGuestBookScanned(parsedId).catch(() => { });
-                            }
+                                if (parsedId.startsWith("BWS-")) {
+                                    markGuestBookScanned(parsedId).catch(() => { });
+                                }
+                            }).catch(() => {
+                                // Default fallback if fetch fails
+                                setScanResult({ trackingId: parsedId });
+                                setIsScanning(false);
+                                setIsLoading(false);
+                                toast.success("QR Code terdeteksi, tetapi gagal mengambil data server.");
+                            });
                         }
                     }
                 );
@@ -100,11 +129,11 @@ export default function ScanPage() {
             } catch (err: any) {
                 if (active) {
                     console.error("Camera error:", err);
-                    const msg = err?.name === "NotAllowedError"
+                    const msg = err?.name === "NotAllowedError" || err?.message.includes("Permission denied")
                         ? "Izin kamera ditolak. Buka pengaturan browser Anda dan izinkan akses kamera untuk situs ini."
-                        : err?.name === "NotFoundError"
-                            ? "Tidak ada kamera yang tersedia di perangkat ini."
-                            : "Gagal mengakses kamera. Pastikan Anda memberikan izin akses kamera.";
+                        : err?.name === "NotFoundError" || err?.message.includes("Requested device not found")
+                            ? "Kamera belakang tidak ditemukan atau tidak tersedia di perangkat ini."
+                            : "Gagal mengakses kamera. Pastikan Anda memberikan izin akses kamera dan menggunakan koneksi aman (HTTPS).";
                     setCameraError(msg);
                 }
             }
@@ -137,7 +166,7 @@ export default function ScanPage() {
                     autoPlay
                     playsInline
                     muted
-                    className="w-[100vw] h-[100dvh] object-cover absolute top-0 left-0 m-0 p-0 pointer-events-none"
+                    className="w-screen h-dvh object-cover absolute top-0 left-0 m-0 p-0 pointer-events-none"
                 />
             </div>
 
@@ -173,6 +202,20 @@ export default function ScanPage() {
                                 <div className="absolute bottom-0 left-0 w-10 h-10 border-b-[5px] border-l-[5px] border-yellow-400 rounded-bl-2xl" />
                                 <div className="absolute bottom-0 right-0 w-10 h-10 border-b-[5px] border-r-[5px] border-yellow-400 rounded-br-2xl" />
 
+                                {/* Scanning Animation Line */}
+                                {!cameraError && (
+                                    <motion.div
+                                        className="absolute left-0 right-0 h-[1px] bg-yellow-400/80 shadow-[0_0_20px_4px_rgba(250,204,21,0.6)]"
+                                        initial={{ top: "0%" }}
+                                        animate={{ top: ["0%", "100%", "0%"] }}
+                                        transition={{
+                                            duration: 2.5,
+                                            ease: "linear",
+                                            repeat: Infinity,
+                                        }}
+                                    />
+                                )}
+
                                 {/* Camera Error (Centered in box) */}
                                 {cameraError && (
                                     <div className="absolute inset-0 z-30 bg-white/95 flex flex-col items-center justify-center px-6 text-center pointer-events-auto">
@@ -192,10 +235,6 @@ export default function ScanPage() {
                             {/* Floating Labels (Inside/Near the box area) */}
                             {(!cameraError) && (
                                 <div className="absolute -bottom-24 left-1/2 -translate-x-1/2 w-max flex flex-col items-center gap-4">
-                                    <div className="flex items-center gap-3 bg-blue-950/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/10 text-white shadow-xl">
-                                        <ScanLine className="w-5 h-5 text-yellow-400 animate-pulse" />
-                                        <p className="text-sm font-bold tracking-wide uppercase">Scanning QR Code...</p>
-                                    </div>
                                     <p className="text-white/60 text-xs font-medium bg-black/20 backdrop-blur-sm px-4 py-1 rounded-full border border-white/5">
                                         Arahkan kode ke dalam kotak scan
                                     </p>
