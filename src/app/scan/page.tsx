@@ -8,6 +8,8 @@ import { toast, Toaster } from "sonner";
 import { useRouter } from "next/navigation";
 import { markGuestBookScanned, getGuestBookByTrackingId } from "@/app/actions/guest-book";
 import { Html5Qrcode } from "html5-qrcode";
+import { Button } from "@/components/ui/button";
+
 
 export default function ScanPage() {
     const [scanResult, setScanResult] = useState<any | null>(null);
@@ -18,6 +20,8 @@ export default function ScanPage() {
     const [currentDeviceIndex, setCurrentDeviceIndex] = useState<number | null>(null);
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const isInitializing = useRef(false);
+    const [manualId, setManualId] = useState("");
+    const [isInputFocused, setIsInputFocused] = useState(false);
     const router = useRouter();
 
     const safeStop = async () => {
@@ -59,7 +63,7 @@ export default function ScanPage() {
                     isInitializing.current = false;
                     return;
                 }
-                
+
                 setDevices(videoDevices);
 
                 if (videoDevices.length === 0) {
@@ -89,8 +93,7 @@ export default function ScanPage() {
                     deviceId,
                     {
                         fps: 20,
-                        // qrbox: removed per user request for custom UI alignment
-                        aspectRatio: 1.0,
+                        aspectRatio: 1.777,
                     },
                     (decodedText) => {
                         if (active) {
@@ -155,6 +158,32 @@ export default function ScanPage() {
         }
     };
 
+    const handleManualSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!manualId.trim() || isLoading) return;
+
+        setIsLoading(true);
+        toast.loading("Mencari data...", { id: "manual-process" });
+
+        getGuestBookByTrackingId(manualId.trim())
+            .then((guestData) => {
+                toast.dismiss("manual-process");
+                setScanResult(guestData || { trackingId: manualId.trim() });
+                setIsScanning(false);
+                setIsLoading(false);
+                toast.success("Berhasil ditemukan!");
+                safeStop();
+                if (manualId.trim().startsWith("BWS-")) {
+                    markGuestBookScanned(manualId.trim()).catch(() => { });
+                }
+            })
+            .catch(() => {
+                toast.dismiss("manual-process");
+                toast.error("Data tidak ditemukan.");
+                setIsLoading(false);
+            });
+    };
+
     const resetScanner = () => {
         window.location.reload();
     };
@@ -165,7 +194,7 @@ export default function ScanPage() {
 
             {/* Background Feed */}
             <div className={`fixed inset-0 z-0 bg-black transition-opacity duration-300 overflow-hidden ${isScanning ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-                <div id="qr-reader" className="w-full h-full [&>video]:object-cover [&>video]:absolute [&>video]:inset-0 [&>video]:w-full [&>video]:h-full" />
+                <div id="qr-reader" className="w-full h-full [&>video]:object-cover [&>video]:inset-0 [&>video]:w-full [&>video]:h-full" />
             </div>
 
             {/* Header */}
@@ -180,14 +209,7 @@ export default function ScanPage() {
                     <h1 className={`text-sm font-extrabold tracking-widest uppercase ${isScanning ? "text-white" : "text-blue-950"}`}>Monitor Pindaian</h1>
                     <p className={`text-[10px] font-bold tracking-wider opacity-60 uppercase ${isScanning ? "text-white" : "text-blue-950"}`}>Verifikasi Tamu</p>
                 </div>
-                {isScanning && devices.length > 1 && (
-                    <button
-                        onClick={switchCamera}
-                        className="p-2.5 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all active:rotate-180"
-                    >
-                        <RefreshCw className="w-5 h-5" />
-                    </button>
-                )}
+
             </header>
 
             {/* Viewfinder Overlay */}
@@ -243,7 +265,7 @@ export default function ScanPage() {
             </AnimatePresence>
 
             {/* Results Layer */}
-            <main className="flex-1 flex flex-col items-center justify-center p-4 relative z-20">
+            <main className="flex-1 flex flex-col items-center justify-center p-4 relative z-[100]">
                 <AnimatePresence mode="wait">
                     {isLoading && (
                         <motion.div
@@ -251,7 +273,7 @@ export default function ScanPage() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="bg-white/80 backdrop-blur-md rounded-[24px] border border-yellow-200/70 p-8 text-center shadow-2xl flex flex-col items-center"
+                            className="bg-white/90 backdrop-blur-md rounded-[24px] border border-yellow-200/70 p-8 text-center shadow-2xl flex flex-col items-center"
                         >
                             <div className="w-12 h-12 border-4 border-blue-950/20 border-t-blue-950 rounded-full animate-spin mb-4" />
                             <p className="text-blue-950 font-bold">Mengambil data...</p>
@@ -261,23 +283,21 @@ export default function ScanPage() {
                     {!isScanning && !isLoading && (
                         <motion.div
                             key="result"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="w-full max-w-sm"
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            className="fixed inset-0 z-50 w-full h-full bg-white"
                         >
-                            <div className="bg-white/80 backdrop-blur-md rounded-[24px] border border-yellow-200/70 p-8 text-center shadow-2xl">
+                            <div className="bg-white/95  text-center">
                                 <motion.div
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
-                                    className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"
+                                    className="w-20 h-20 bg-green-100 mt-5 rounded-full flex items-center justify-center mx-auto mb-6"
                                 >
                                     <CheckCircle2 className="w-10 h-10 text-green-600" />
                                 </motion.div>
 
-                                <h2 className="text-xl font-extrabold text-blue-950 mb-1">Berhasil!</h2>
-                                <p className="text-sm text-blue-950/50 mb-6">Detail pindaian:</p>
-
-                                <div className="space-y-4 mb-8">
+                                <h2 className="text-xl font-extrabold text-blue-950 mb-3">Berhasil!</h2>
+                                <div className="space-y-4 px-4  mb-8">
                                     <div className="bg-blue-950/5 border border-blue-950/10 rounded-2xl p-4 text-left">
                                         <p className="text-[10px] text-blue-950/40 font-bold uppercase tracking-wider mb-1">Nama Tamu</p>
                                         <p className="font-bold text-blue-950">{scanResult?.name || "-"}</p>
@@ -287,7 +307,7 @@ export default function ScanPage() {
                                         <p className="font-bold text-blue-950">{scanResult?.agencyName || "-"}</p>
                                     </div>
                                     <div className="bg-blue-950/5 border border-blue-950/10 rounded-2xl p-4 text-left">
-                                        <p className="text-[10px] text-blue-950/40 font-bold uppercase tracking-wider mb-1">Subjek</p>
+                                        <p className="text-[10px] text-blue-950/40 font-bold uppercase tracking-wider mb-1">Tujuan Bertemu</p>
                                         <p className="font-bold text-blue-950">{scanResult?.subject || "-"}</p>
                                     </div>
                                     <div className="bg-blue-950/5 border border-blue-950/10 rounded-xl p-3 flex justify-between items-center">
@@ -296,17 +316,10 @@ export default function ScanPage() {
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col gap-3">
-                                    <button
-                                        onClick={() => router.push(`/dashboard?search=${scanResult?.trackingId}`)}
-                                        className="w-full bg-blue-950 hover:bg-blue-900 text-white font-bold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2"
-                                    >
-                                        <Search className="w-5 h-5" />
-                                        DASBOR
-                                    </button>
+                                <div className="flex flex-col px-4 gap-3">
                                     <button
                                         onClick={resetScanner}
-                                        className="w-full bg-white hover:bg-gray-50 text-blue-950 font-semibold py-3 rounded-xl border-2 border-blue-950/10"
+                                        className="w-full bg-white hover:bg-gray-50 text-blue-950 font-semibold py-2 rounded-xl border-2 border-blue-950/10"
                                     >
                                         SCAN ULANG
                                     </button>
@@ -316,6 +329,36 @@ export default function ScanPage() {
                     )}
                 </AnimatePresence>
             </main>
+
+            {/* Manual Input Layer - Fixed at bottom */}
+            {isScanning && (
+                <motion.div
+                    initial={{ y: 100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    className="fixed bottom-12 left-0 right-0 z-100 px-6 pointer-events-none"
+                >
+                    <form
+                        onSubmit={handleManualSubmit}
+                        className="max-w-xs mx-auto pointer-events-auto"
+                    >
+                        <div className={`relative transition-all duration-300`}>
+                            <input
+                                type="text"
+                                value={manualId}
+                                onChange={(e) => setManualId(e.target.value.toUpperCase())}
+                                placeholder="Gunakan ID Manual..."
+                                className="w-full bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg py-3.5 pl-5 pr-12 text-white placeholder:text-white/40 text-sm font-bold  focus:ring-yellow-400/50 transition-all uppercase"
+                            />
+                            <Button
+                                type="submit"
+                                className="absolute right-2 top-1.5 bottom-1.5 px-3 bg-yellow-400 hover:bg-yellow-300 text-blue-950 rounded-full transition-colors flex items-center justify-center active:scale-90"
+                            >
+                                <Search className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </form>
+                </motion.div>
+            )}
 
             {/* Footer */}
             <footer className="fixed bottom-0 left-0 right-0 z-50 text-center pb-4 pointer-events-none">
