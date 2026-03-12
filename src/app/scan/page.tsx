@@ -16,6 +16,8 @@ export default function ScanPage() {
     const [isScanning, setIsScanning] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const [cameraError, setCameraError] = useState<string | null>(null);
+    const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+    const [currentDeviceIndex, setCurrentDeviceIndex] = useState(0);
     const videoRef = useRef<HTMLVideoElement>(null);
     const controlsRef = useRef<IScannerControls | null>(null);
     const router = useRouter();
@@ -47,20 +49,28 @@ export default function ScanPage() {
             }
 
             try {
-                // List all video devices to find the back camera
+                // List all video devices
                 const videoDevices = await BrowserQRCodeReader.listVideoInputDevices();
+                setDevices(videoDevices);
                 
                 if (videoDevices.length === 0) {
                     setCameraError("Tidak ada kamera yang ditemukan pada perangkat ini.");
                     return;
                 }
 
-                // Try to find the back camera by label, otherwise fallback to first device
-                const backCamera = videoDevices.find(device => 
-                    /back|rear|environment/i.test(device.label)
-                ) || videoDevices[videoDevices.length - 1]; // Often the last one is the primary back camera
+                // If this is the first run, try to find the back camera
+                let deviceId = videoDevices[currentDeviceIndex]?.deviceId;
+                
+                if (devices.length === 0) {
+                    const backCameraIndex = videoDevices.findIndex(device => 
+                        /back|rear|environment/i.test(device.label)
+                    );
+                    const targetIndex = backCameraIndex !== -1 ? backCameraIndex : videoDevices.length - 1;
+                    setCurrentDeviceIndex(targetIndex);
+                    deviceId = videoDevices[targetIndex].deviceId;
+                }
 
-                const deviceId = backCamera.deviceId;
+                console.log("Starting scanner with device:", videoDevices[currentDeviceIndex]?.label || "Default");
 
                 // We use decodeFromVideoDevice instead of stream for internal ZXing management
                 const controls = await codeReader.decodeFromVideoDevice(
@@ -71,51 +81,63 @@ export default function ScanPage() {
                             controlsRef.current = ctrls;
                         }
 
-                        if (error && error.name !== 'NotFoundException') {
-                            // Only warn if it's a real decoding error, not just "QR not found yet"
-                            if (error.name !== 'ChecksumException' && error.name !== 'FormatException') {
-                                console.debug("Scan status:", error.name);
-                            }
-                        }
-
                         if (result && active) {
+                            const decodedText = result.getText();
+                            console.log("QR Detected:", decodedText);
+                            toast.loading("Kode terdeteksi, memproses...", { id: "scan-process" });
+                            
                             // Found a QR!
                             active = false;
                             
                             // Immediate UI feedback
                             setIsLoading(true);
 
-                            const decodedText = result.getText();
                             let parsedId = decodedText;
                             const lacakMatch = decodedText.match(/\/lacak\/([A-Z0-9-]+)/i);
                             if (lacakMatch) {
                                 parsedId = lacakMatch[1];
                             }
+                            
+                            console.log("Parsed ID:", parsedId);
 
-                            // Cleanup camera immediately
+                            // Cleanup camera immediately to prevent multiple triggers
                             if (controlsRef.current) {
-                                controlsRef.current.stop();
+                                try {
+                                    controlsRef.current.stop();
+                                } catch (e) {
+                                    console.error("Stop error:", e);
+                                }
                             }
 
                             // Fetch data
                             getGuestBookByTrackingId(parsedId)
                                 .then((guestData) => {
+                                    console.log("Guest data found:", guestData);
+                                    toast.dismiss("scan-process");
                                     setScanResult(guestData || { trackingId: parsedId });
                                     setIsScanning(false);
                                     setIsLoading(false);
-                                    toast.success("QR Code berhasil dipindai!");
+                                    toast.success("Data berhasil ditemukan!");
 
                                     if (parsedId.startsWith("BWS-")) {
-                                        markGuestBookScanned(parsedId).catch(() => {});
+                                        markGuestBookScanned(parsedId).catch((e) => console.error("Update error:", e));
                                     }
                                 })
                                 .catch((err) => {
                                     console.error("Fetch error:", err);
+                                    toast.dismiss("scan-process");
                                     setScanResult({ trackingId: parsedId });
                                     setIsScanning(false);
                                     setIsLoading(false);
-                                    toast.success("QR terdeteksi, tetapi gagal sinkronisasi server.");
+                                    toast.success("QR terdeteksi (offline mode).");
                                 });
+                        }
+
+                        if (error && error.name !== 'NotFoundException') {
+                            // Only log serious failures
+                            if (error.name !== 'ChecksumException' && error.name !== 'FormatException') {
+                                console.warn("Scan error:", error.name);
+                            }
                         }
                     }
                 );
@@ -143,7 +165,17 @@ export default function ScanPage() {
                 controlsRef.current.stop();
             }
         };
-    }, [isScanning]);
+    }, [isScanning, currentDeviceIndex]);
+
+    const switchCamera = () => {
+        if (devices.length > 1) {
+            if (controlsRef.current) {
+                controlsRef.current.stop();
+            }
+            setCurrentDeviceIndex((prev) => (prev + 1) % devices.length);
+            toast.info(`Berpindah ke kamera ${((currentDeviceIndex + 1) % devices.length) + 1}`);
+        }
+    };
 
     const resetScanner = () => {
         window.location.reload();
@@ -160,7 +192,7 @@ export default function ScanPage() {
                     autoPlay
                     playsInline
                     muted
-                    className="w-screen h-dvh object-cover absolute top-0 left-0 m-0 p-0 pointer-events-none"
+                    className="w-full h-full object-contain absolute top-0 left-0 m-0 p-0 pointer-events-none"
                 />
             </div>
 
@@ -172,10 +204,19 @@ export default function ScanPage() {
                 >
                     <ArrowLeft className="w-5 h-5" />
                 </Link>
-                <div>
+                <div className="flex-1">
                     <h1 className={`text-base font-extrabold tracking-wide ${isScanning ? "text-white" : "text-blue-950"}`}>SCAN QR CODE</h1>
                     <p className={`text-xs font-bold tracking-wider ${isScanning ? "text-white/70" : "text-blue-950/50"}`}>PINDAI QR CODE TAMU   </p>
                 </div>
+                {isScanning && devices.length > 1 && (
+                    <button
+                        onClick={switchCamera}
+                        className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                        title="Ganti Kamera"
+                    >
+                        <RefreshCw className="w-5 h-5" />
+                    </button>
+                )}
             </header>
 
             {/* Scanning UI (Fixed Overlay) */}
