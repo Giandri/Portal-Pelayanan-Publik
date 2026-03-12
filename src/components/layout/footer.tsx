@@ -45,10 +45,18 @@ export function Footer() {
                                     </li>
                                     <li>
                                         <Link003
+                                            href="/buku-tamu"
+                                            className="w-fit text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                                        >
+                                            Buku Tamu
+                                        </Link003>
+                                    </li>
+                                    <li>
+                                        <Link003
                                             href="/pengajuan"
                                             className="w-fit text-xs text-gray-500 hover:text-gray-700 transition-colors"
                                         >
-                                            Pengajuan
+                                            Permohonan Data
                                         </Link003>
                                     </li>
                                     <li>
