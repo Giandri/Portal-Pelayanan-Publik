@@ -27,10 +27,8 @@ export default function ScanPage() {
     const safeStop = async () => {
         if (scannerRef.current) {
             try {
-                // html5-qrcode's stop() throws if not in scanning/paused state
                 await scannerRef.current.stop();
             } catch (e: any) {
-                // Silence common errors about scanner not running
                 const msg = e?.message || e?.toString() || "";
                 if (!msg.includes("not running") && !msg.includes("paused")) {
                     console.warn("Scanner safeStop error:", e);
@@ -43,7 +41,6 @@ export default function ScanPage() {
         let active = true;
 
         const startScanner = async () => {
-            // Guard against parallel initializations
             if (isInitializing.current) return;
             isInitializing.current = true;
 
@@ -53,11 +50,9 @@ export default function ScanPage() {
                 return;
             }
 
-            // Clear previous errors before attempt
             setCameraError(null);
 
             try {
-                // 1. Get Cameras
                 const videoDevices = await Html5Qrcode.getCameras();
                 if (!active) {
                     isInitializing.current = false;
@@ -72,7 +67,6 @@ export default function ScanPage() {
                     return;
                 }
 
-                // 2. Determine initial camera if not set
                 let targetIndex = currentDeviceIndex;
                 if (targetIndex === null) {
                     const backCamera = videoDevices.find(d => /back|rear|environment/i.test(d.label));
@@ -80,21 +74,30 @@ export default function ScanPage() {
                     setCurrentDeviceIndex(targetIndex);
                 }
 
-                // 3. Robust Cleanup
                 await safeStop();
 
-                // 4. Create and Start Instance
                 const html5QrCode = new Html5Qrcode("qr-reader");
                 scannerRef.current = html5QrCode;
 
                 const deviceId = videoDevices[targetIndex]?.id || videoDevices[0].id;
 
+                // Hitung qrbox sesuai ukuran kotak visual di UI (70vw, max 280px)
+                const qrboxSize = Math.min(
+                    Math.floor(window.innerWidth * 0.7),
+                    280
+                );
+
                 await html5QrCode.start(
-                    deviceId,
+
                     {
-                        fps: 10,
+                        deviceId: { exact: deviceId },
+                        width: { min: 640, ideal: 1280, max: 1920 },
+                        height: { min: 480, ideal: 720, max: 1080 },
+                    },
+                    {
+                        fps: 20,
+                        qrbox: { width: qrboxSize, height: qrboxSize },
                         aspectRatio: 1.0,
-                        disableFlip: true,
                     },
                     (decodedText) => {
                         if (active) {
@@ -106,7 +109,6 @@ export default function ScanPage() {
                             const lacakMatch = decodedText.match(/\/lacak\/([A-Z0-9-]+)/i);
                             if (lacakMatch) parsedId = lacakMatch[1];
 
-                            // Stop scanning immediately on detection
                             safeStop();
 
                             getGuestBookByTrackingId(parsedId)
@@ -130,7 +132,7 @@ export default function ScanPage() {
                         }
                     },
                     () => {
-                        // ignore failures
+                        // ignore frame failures
                     }
                 );
             } catch (err) {
@@ -195,7 +197,7 @@ export default function ScanPage() {
 
             {/* Background Feed */}
             <div className={`fixed inset-0 z-0 bg-black transition-opacity duration-300 overflow-hidden ${isScanning ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-                <div id="qr-reader" className="w-full h-full [&>video]:object-cover [&>video]:inset-0 [&>video]:w-full [&>video]:h-full" />
+                <div id="qr-reader" className="w-full h-full [&>video]:object-cover [&>video]:absolute [&>video]:inset-0 [&>video]:w-full [&>video]:h-full" />
             </div>
 
             {/* Header */}
@@ -223,7 +225,7 @@ export default function ScanPage() {
                         className="fixed inset-0 z-10 flex items-center justify-center pointer-events-none"
                     >
                         <div className="relative w-[70vw] h-[70vw] max-w-[280px] max-h-[280px] min-w-[200px] min-h-[200px] flex items-center justify-center">
-                            {/* Mask Overlay - Made lighter to fix "Gelap" issue */}
+                            {/* Mask Overlay */}
                             <div className="absolute inset-0 rounded-3xl overflow-hidden border border-white/20 shadow-[0_0_0_2000px_rgba(0,0,0,0.6)]">
                                 <div className="absolute top-0 left-0 w-10 h-10 border-t-[5px] border-l-[5px] border-yellow-400 rounded-tl-2xl" />
                                 <div className="absolute top-0 right-0 w-10 h-10 border-t-[5px] border-r-[5px] border-yellow-400 rounded-tr-2xl" />
