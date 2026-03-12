@@ -285,7 +285,7 @@ export default function ScanPage() {
                                 <motion.div
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
-                                    className="w-20 h-20 bg-green-100 mt-5 rounded-full flex items-center justify-center mx-auto mb-6"
+                                    className="w-20 h-20 bg-green-100 mt-20 rounded-full flex items-center justify-center mx-auto mb-6"
                                 >
                                     <CheckCircle2 className="w-10 h-10 text-green-600" />
                                 </motion.div>
