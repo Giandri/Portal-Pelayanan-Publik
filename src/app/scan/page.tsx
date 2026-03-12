@@ -15,49 +15,82 @@ export default function ScanPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [cameraError, setCameraError] = useState<string | null>(null);
     const [devices, setDevices] = useState<any[]>([]);
-    const [currentDeviceIndex, setCurrentDeviceIndex] = useState(0);
+    const [currentDeviceIndex, setCurrentDeviceIndex] = useState<number | null>(null);
     const scannerRef = useRef<Html5Qrcode | null>(null);
+    const isInitializing = useRef(false);
     const router = useRouter();
+
+    const safeStop = async () => {
+        if (scannerRef.current) {
+            try {
+                // html5-qrcode's stop() throws if not in scanning/paused state
+                await scannerRef.current.stop();
+            } catch (e: any) {
+                // Silence common errors about scanner not running
+                const msg = e?.message || e?.toString() || "";
+                if (!msg.includes("not running") && !msg.includes("paused")) {
+                    console.warn("Scanner safeStop error:", e);
+                }
+            }
+        }
+    };
 
     useEffect(() => {
         let active = true;
 
         const startScanner = async () => {
+            // Guard against parallel initializations
+            if (isInitializing.current) return;
+            isInitializing.current = true;
+
             const scannerContainer = document.getElementById("qr-reader");
-            if (!scannerContainer) return;
+            if (!scannerContainer) {
+                isInitializing.current = false;
+                return;
+            }
+
+            // Clear previous errors before attempt
+            setCameraError(null);
 
             try {
+                // 1. Get Cameras
                 const videoDevices = await Html5Qrcode.getCameras();
+                if (!active) {
+                    isInitializing.current = false;
+                    return;
+                }
+                
                 setDevices(videoDevices);
 
                 if (videoDevices.length === 0) {
                     setCameraError("Kamera tidak ditemukan.");
+                    isInitializing.current = false;
                     return;
                 }
 
-                if (scannerRef.current) {
-                    try {
-                        await scannerRef.current.stop();
-                    } catch (e) { }
+                // 2. Determine initial camera if not set
+                let targetIndex = currentDeviceIndex;
+                if (targetIndex === null) {
+                    const backCamera = videoDevices.find(d => /back|rear|environment/i.test(d.label));
+                    targetIndex = backCamera ? videoDevices.findIndex(d => d.id === backCamera.id) : 0;
+                    setCurrentDeviceIndex(targetIndex);
                 }
 
+                // 3. Robust Cleanup
+                await safeStop();
+
+                // 4. Create and Start Instance
                 const html5QrCode = new Html5Qrcode("qr-reader");
                 scannerRef.current = html5QrCode;
 
-                let deviceId = videoDevices[currentDeviceIndex]?.id;
-
-                if (devices.length === 0) {
-                    const backCamera = videoDevices.find(d => /back|rear|environment/i.test(d.label));
-                    const initialIndex = videoDevices.findIndex(d => d.id === (backCamera?.id || videoDevices[0].id));
-                    setCurrentDeviceIndex(initialIndex);
-                    deviceId = backCamera?.id || videoDevices[0].id;
-                }
+                const deviceId = videoDevices[targetIndex]?.id || videoDevices[0].id;
 
                 await html5QrCode.start(
                     deviceId,
                     {
-                        fps: 15,
-                        aspectRatio: 1.777
+                        fps: 20,
+                        // qrbox: removed per user request for custom UI alignment
+                        aspectRatio: 1.0,
                     },
                     (decodedText) => {
                         if (active) {
@@ -69,9 +102,8 @@ export default function ScanPage() {
                             const lacakMatch = decodedText.match(/\/lacak\/([A-Z0-9-]+)/i);
                             if (lacakMatch) parsedId = lacakMatch[1];
 
-                            if (scannerRef.current) {
-                                scannerRef.current.stop().catch(() => { });
-                            }
+                            // Stop scanning immediately on detection
+                            safeStop();
 
                             getGuestBookByTrackingId(parsedId)
                                 .then((guestData) => {
@@ -93,10 +125,17 @@ export default function ScanPage() {
                                 });
                         }
                     },
-                    () => { }
+                    () => {
+                        // ignore failures
+                    }
                 );
             } catch (err) {
-                if (active) setCameraError("Gagal akses kamera. Periksa izin.");
+                if (active) {
+                    console.error("Scanner Error:", err);
+                    setCameraError("Gagal akses kamera. Periksa izin atau coba lagi.");
+                }
+            } finally {
+                isInitializing.current = false;
             }
         };
 
@@ -106,17 +145,13 @@ export default function ScanPage() {
 
         return () => {
             active = false;
-            if (scannerRef.current) {
-                try {
-                    scannerRef.current.stop();
-                } catch (e) { }
-            }
+            safeStop();
         };
     }, [isScanning, currentDeviceIndex]);
 
     const switchCamera = () => {
-        if (devices.length > 1) {
-            setCurrentDeviceIndex((prev) => (prev + 1) % devices.length);
+        if (devices.length > 1 && !isInitializing.current) {
+            setCurrentDeviceIndex((prev) => ((prev ?? 0) + 1) % devices.length);
         }
     };
 
@@ -145,7 +180,14 @@ export default function ScanPage() {
                     <h1 className={`text-sm font-extrabold tracking-widest uppercase ${isScanning ? "text-white" : "text-blue-950"}`}>Monitor Pindaian</h1>
                     <p className={`text-[10px] font-bold tracking-wider opacity-60 uppercase ${isScanning ? "text-white" : "text-blue-950"}`}>Verifikasi Tamu</p>
                 </div>
-
+                {isScanning && devices.length > 1 && (
+                    <button
+                        onClick={switchCamera}
+                        className="p-2.5 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all active:rotate-180"
+                    >
+                        <RefreshCw className="w-5 h-5" />
+                    </button>
+                )}
             </header>
 
             {/* Viewfinder Overlay */}
@@ -158,7 +200,8 @@ export default function ScanPage() {
                         className="fixed inset-0 z-10 flex items-center justify-center pointer-events-none"
                     >
                         <div className="relative w-[70vw] h-[70vw] max-w-[280px] max-h-[280px] min-w-[200px] min-h-[200px] flex items-center justify-center">
-                            <div className="absolute inset-0 rounded-3xl overflow-hidden border border-white/20 shadow-[0_0_0_2000px_rgba(0,0,0,0.35)]">
+                            {/* Mask Overlay - Made lighter to fix "Gelap" issue */}
+                            <div className="absolute inset-0 rounded-3xl overflow-hidden border border-white/20 shadow-[0_0_0_2000px_rgba(0,0,0,0.3)]">
                                 <div className="absolute top-0 left-0 w-10 h-10 border-t-[5px] border-l-[5px] border-yellow-400 rounded-tl-2xl" />
                                 <div className="absolute top-0 right-0 w-10 h-10 border-t-[5px] border-r-[5px] border-yellow-400 rounded-tr-2xl" />
                                 <div className="absolute bottom-0 left-0 w-10 h-10 border-b-[5px] border-l-[5px] border-yellow-400 rounded-bl-2xl" />
@@ -178,7 +221,7 @@ export default function ScanPage() {
                                         <p className="text-sm text-blue-950/70 font-medium mb-4">{cameraError}</p>
                                         <button
                                             onClick={resetScanner}
-                                            className="flex items-center gap-2 bg-blue-950 text-white font-bold px-5 py-2.5 rounded-xl text-sm"
+                                            className="flex items-center gap-2 bg-blue-950 text-white font-bold px-5 py-2.5 rounded-xl text-sm hover:bg-black transition-colors"
                                         >
                                             <RefreshCw className="w-4 h-4" />
                                             Coba Lagi
