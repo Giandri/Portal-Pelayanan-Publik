@@ -7,134 +7,118 @@ import Link from "next/link";
 import { toast, Toaster } from "sonner";
 import { useRouter } from "next/navigation";
 import { markGuestBookScanned, getGuestBookByTrackingId } from "@/app/actions/guest-book";
-import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
-
+import QrScanner from "qr-scanner";
 
 export default function ScanPage() {
     const [scanResult, setScanResult] = useState<any | null>(null);
     const [isScanning, setIsScanning] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const [cameraError, setCameraError] = useState<string | null>(null);
-    const [devices, setDevices] = useState<any[]>([]);
-    const [currentDeviceIndex, setCurrentDeviceIndex] = useState<number | null>(null);
-    const scannerRef = useRef<Html5Qrcode | null>(null);
-    const isInitializing = useRef(false);
-    const [manualId, setManualId] = useState("");
+    const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
     const [isInputFocused, setIsInputFocused] = useState(false);
+    const [manualId, setManualId] = useState("");
+    const [facingMode, setFacingMode] = useState<QrScanner.FacingMode>("environment");
     const router = useRouter();
 
-    const safeStop = async () => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const scannerRef = useRef<QrScanner | null>(null);
+    const isInitializing = useRef(false);
+    const hasScanned = useRef(false);
+
+    const safeStop = () => {
         if (scannerRef.current) {
             try {
-                await scannerRef.current.stop();
-            } catch (e: any) {
-                const msg = e?.message || e?.toString() || "";
-                if (!msg.includes("not running") && !msg.includes("paused")) {
-                    console.warn("Scanner safeStop error:", e);
-                }
+                scannerRef.current.stop();
+                scannerRef.current.destroy();
+            } catch (e) {
+                console.warn("Scanner stop error:", e);
             }
+            scannerRef.current = null;
         }
     };
 
+    const handleDecoded = (decodedText: string) => {
+        if (hasScanned.current) return;
+        hasScanned.current = true;
+
+        setIsLoading(true);
+        toast.loading("Memproses kode...", { id: "scan-process" });
+
+        let parsedId = decodedText;
+        const lacakMatch = decodedText.match(/\/lacak\/([A-Z0-9-]+)/i);
+        if (lacakMatch) parsedId = lacakMatch[1];
+
+        safeStop();
+
+        getGuestBookByTrackingId(parsedId)
+            .then((guestData) => {
+                toast.dismiss("scan-process");
+                setScanResult(guestData || { trackingId: parsedId });
+                setIsScanning(false);
+                setIsLoading(false);
+                toast.success("Berhasil!");
+                if (parsedId.startsWith("BWS-")) {
+                    markGuestBookScanned(parsedId).catch(() => { });
+                }
+            })
+            .catch(() => {
+                toast.dismiss("scan-process");
+                setScanResult({ trackingId: parsedId });
+                setIsScanning(false);
+                setIsLoading(false);
+                toast.success("Offline Mode.");
+            });
+    };
+
     useEffect(() => {
+        if (!isScanning) return;
+
         let active = true;
 
         const startScanner = async () => {
-            if (isInitializing.current) return;
+            if (isInitializing.current || !videoRef.current) return;
             isInitializing.current = true;
-
-            const scannerContainer = document.getElementById("qr-reader");
-            if (!scannerContainer) {
-                isInitializing.current = false;
-                return;
-            }
-
+            hasScanned.current = false;
             setCameraError(null);
 
             try {
-                const videoDevices = await Html5Qrcode.getCameras();
-                if (!active) {
-                    isInitializing.current = false;
-                    return;
-                }
+                // Cek apakah device punya lebih dari 1 kamera (untuk tombol switch)
+                const cameras = await QrScanner.listCameras(true);
+                if (active) setHasMultipleCameras(cameras.length > 1);
 
-                setDevices(videoDevices);
-
-                if (videoDevices.length === 0) {
-                    setCameraError("Kamera tidak ditemukan.");
-                    isInitializing.current = false;
-                    return;
-                }
-
-                let targetIndex = currentDeviceIndex;
-                if (targetIndex === null) {
-                    const backCamera = videoDevices.find(d => /back|rear|environment/i.test(d.label));
-                    targetIndex = backCamera ? videoDevices.findIndex(d => d.id === backCamera.id) : 0;
-                    setCurrentDeviceIndex(targetIndex);
-                }
-
-                await safeStop();
-
-                const html5QrCode = new Html5Qrcode("qr-reader");
-                scannerRef.current = html5QrCode;
-
-                const deviceId = videoDevices[targetIndex]?.id || videoDevices[0].id;
-
-                // Hitung qrbox sesuai ukuran kotak visual di UI (70vw, max 280px)
-                const qrboxSize = Math.min(
-                    Math.floor(window.innerWidth * 0.7),
-                    280
-                );
-
-                await html5QrCode.start(
-
-                    {
-                        deviceId: { exact: deviceId },
-                        width: { min: 640, ideal: 1280, max: 1920 },
-                        height: { min: 480, ideal: 720, max: 1080 },
+                const scanner = new QrScanner(
+                    videoRef.current!,
+                    (result) => {
+                        if (active) handleDecoded(result.data);
                     },
                     {
-                        fps: 20,
-                        qrbox: { width: qrboxSize, height: qrboxSize },
-                        aspectRatio: 1.0,
-                    },
-                    (decodedText) => {
-                        if (active) {
-                            active = false;
-                            setIsLoading(true);
-                            toast.loading("Memproses kode...", { id: "scan-process" });
-
-                            let parsedId = decodedText;
-                            const lacakMatch = decodedText.match(/\/lacak\/([A-Z0-9-]+)/i);
-                            if (lacakMatch) parsedId = lacakMatch[1];
-
-                            safeStop();
-
-                            getGuestBookByTrackingId(parsedId)
-                                .then((guestData) => {
-                                    toast.dismiss("scan-process");
-                                    setScanResult(guestData || { trackingId: parsedId });
-                                    setIsScanning(false);
-                                    setIsLoading(false);
-                                    toast.success("Berhasil!");
-                                    if (parsedId.startsWith("BWS-")) {
-                                        markGuestBookScanned(parsedId).catch(() => { });
-                                    }
-                                })
-                                .catch(() => {
-                                    toast.dismiss("scan-process");
-                                    setScanResult({ trackingId: parsedId });
-                                    setIsScanning(false);
-                                    setIsLoading(false);
-                                    toast.success("Offline Mode.");
-                                });
-                        }
-                    },
-                    () => {
-                        // ignore frame failures
+                        // Kamera belakang
+                        preferredCamera: facingMode,
+                        // Koordinat area scan — sesuai kotak UI (70vw max 280px)
+                        // qr-scanner pakai pixel, jadi hitung dari viewport
+                        calculateScanRegion: (video) => {
+                            const size = Math.min(
+                                Math.floor(video.videoWidth * 0.7),
+                                280
+                            );
+                            return {
+                                x: Math.floor((video.videoWidth - size) / 2),
+                                y: Math.floor((video.videoHeight - size) / 2),
+                                width: size,
+                                height: size,
+                            };
+                        },
+                        // Matikan semua UI bawaan qr-scanner
+                        highlightScanRegion: false,
+                        highlightCodeOutline: false,
+                        returnDetailedScanResult: true,
+                        maxScansPerSecond: 15,
                     }
                 );
+
+                scannerRef.current = scanner;
+                await scanner.start();
             } catch (err) {
                 if (active) {
                     console.error("Scanner Error:", err);
@@ -145,19 +129,22 @@ export default function ScanPage() {
             }
         };
 
-        if (isScanning) {
-            startScanner();
-        }
+        startScanner();
 
         return () => {
             active = false;
             safeStop();
         };
-    }, [isScanning, currentDeviceIndex]);
+    }, [isScanning, facingMode]);
 
-    const switchCamera = () => {
-        if (devices.length > 1 && !isInitializing.current) {
-            setCurrentDeviceIndex((prev) => ((prev ?? 0) + 1) % devices.length);
+    const switchCamera = async () => {
+        if (!scannerRef.current || isInitializing.current) return;
+        try {
+            const newMode = facingMode === "environment" ? "user" : "environment";
+            setFacingMode(newMode);
+            await scannerRef.current.setCamera(newMode);
+        } catch (e) {
+            console.warn("Switch camera error:", e);
         }
     };
 
@@ -195,9 +182,14 @@ export default function ScanPage() {
         <div className="h-screen max-h-screen relative overflow-hidden flex flex-col bg-black">
             <Toaster position="top-center" richColors />
 
-            {/* Background Feed */}
+            {/* Background Feed — langsung <video> kita kontrol sendiri */}
             <div className={`fixed inset-0 z-0 bg-black transition-opacity duration-300 overflow-hidden ${isScanning ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-                <div id="qr-reader" className="w-full h-full [&>video]:object-cover [&>video]:absolute [&>video]:inset-0 [&>video]:w-full [&>video]:h-full" />
+                <video
+                    ref={videoRef}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    muted
+                    playsInline // wajib untuk iOS Safari
+                />
             </div>
 
             {/* Header */}
@@ -212,7 +204,6 @@ export default function ScanPage() {
                     <h1 className={`text-sm font-extrabold tracking-widest uppercase ${isScanning ? "text-white" : "text-blue-950"}`}>Monitor Pindaian</h1>
                     <p className={`text-[10px] font-bold tracking-wider opacity-60 uppercase ${isScanning ? "text-white" : "text-blue-950"}`}>Verifikasi Tamu</p>
                 </div>
-
             </header>
 
             {/* Viewfinder Overlay */}
@@ -290,7 +281,7 @@ export default function ScanPage() {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             className="fixed inset-0 z-50 w-full h-full bg-white"
                         >
-                            <div className="bg-white/95  text-center">
+                            <div className="bg-white/95 text-center">
                                 <motion.div
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
@@ -300,7 +291,7 @@ export default function ScanPage() {
                                 </motion.div>
 
                                 <h2 className="text-xl font-extrabold text-blue-950 mb-3">Berhasil!</h2>
-                                <div className="space-y-4 px-4  mb-8">
+                                <div className="space-y-4 px-4 mb-8">
                                     <div className="bg-blue-950/5 border border-blue-950/10 rounded-2xl p-4 text-left">
                                         <p className="text-[10px] text-blue-950/40 font-bold uppercase tracking-wider mb-1">Nama Tamu</p>
                                         <p className="font-bold text-blue-950">{scanResult?.name || "-"}</p>
@@ -344,13 +335,13 @@ export default function ScanPage() {
                         onSubmit={handleManualSubmit}
                         className="max-w-xs mx-auto pointer-events-auto"
                     >
-                        <div className={`relative transition-all duration-300`}>
+                        <div className="relative transition-all duration-300">
                             <input
                                 type="text"
                                 value={manualId}
                                 onChange={(e) => setManualId(e.target.value.toUpperCase())}
                                 placeholder="Gunakan ID Manual..."
-                                className="w-full bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg py-3.5 pl-5 pr-12 text-white placeholder:text-white/40 text-sm font-bold  focus:ring-yellow-400/50 transition-all uppercase"
+                                className="w-full bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg py-3.5 pl-5 pr-12 text-white placeholder:text-white/40 text-sm font-bold focus:ring-yellow-400/50 transition-all uppercase"
                             />
                             <Button
                                 type="submit"
