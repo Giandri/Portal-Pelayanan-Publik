@@ -560,7 +560,7 @@ export default function GuestBookPage() {
                                     ) : (
                                         <Button
                                             onClick={handleSubmit}
-                                            className="h-11 px-6 shadow-sm bg-green-600 hover:bg-green-700 text-white font-medium"
+                                            className="h-11 px-6 shadow-sm bg-yellow-500 hover:bg-yellow-400 text-white font-medium"
                                             disabled={isSubmitting || !formData.name || !formData.email || !formData.nik || !agencyCategory || !formData.phone || !formData.subject}
                                         >
                                             <Send className="w-4 h-4 mr-2" />
