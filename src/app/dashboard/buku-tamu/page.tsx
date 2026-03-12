@@ -55,6 +55,11 @@ import {
     XCircle,
 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { exportGuestBookToExcel } from "@/lib/export-xlsx";
+import { FileDown, CalendarDays, RotateCcw } from "lucide-react";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
+import { MonthPicker } from "@/components/ui/month-picker";
 
 interface GuestBookEntry {
     id: string;
@@ -80,6 +85,7 @@ export default function BukuTamuDashboardPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [scanFilter, setScanFilter] = useState<string>("all");
+    const [selectedMonth, setSelectedMonth] = useState<Date | undefined>(undefined);
     const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [detailEntry, setDetailEntry] = useState<GuestBookEntry | null>(null);
@@ -97,6 +103,16 @@ export default function BukuTamuDashboardPage() {
         };
         fetchEntries();
     }, []);
+
+    const handleExport = async () => {
+        try {
+            await exportGuestBookToExcel(filteredEntries);
+            toast.success("Data berhasil diekspor ke Excel");
+        } catch (error) {
+            console.error("Export failed:", error);
+            toast.error("Gagal mengekspor data");
+        }
+    };
 
     const handleDelete = async () => {
         if (!entryToDelete) return;
@@ -129,7 +145,13 @@ export default function BukuTamuDashboardPage() {
             (scanFilter === "scanned" && entry.isScanned) ||
             (scanFilter === "unscanned" && !entry.isScanned);
 
-        return matchesSearch && matchesScan;
+        const entryDate = new Date(entry.createdAt);
+        const matchesMonth = !selectedMonth || (
+            entryDate.getMonth() === selectedMonth.getMonth() &&
+            entryDate.getFullYear() === selectedMonth.getFullYear()
+        );
+
+        return matchesSearch && matchesScan && matchesMonth;
     });
 
     const scannedCount = entries.filter((e) => e.isScanned).length;
@@ -206,6 +228,26 @@ export default function BukuTamuDashboardPage() {
                             </CardDescription>
                         </div>
                         <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
+                                <MonthPicker
+                                    date={selectedMonth}
+                                    setDate={setSelectedMonth}
+                                    onExport={handleExport}
+                                    className="w-[200px] h-9 text-xs"
+                                    placeholder="Export Buku Tamu"
+                                />
+                                {selectedMonth && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-9 w-9 text-muted-foreground hover:text-red-500"
+                                        onClick={() => setSelectedMonth(undefined)}
+                                        title="Hapus filter bulan"
+                                    >
+                                        <RotateCcw className="w-4 h-4" />
+                                    </Button>
+                                )}
+                            </div>
                             <div className="relative w-full md:w-64">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input

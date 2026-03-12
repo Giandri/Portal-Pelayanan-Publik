@@ -22,7 +22,7 @@ export default function ScanPage() {
 
     useEffect(() => {
         let active = true;
-        
+
         const hints = new Map();
         hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
         hints.set(DecodeHintType.TRY_HARDER, true);
@@ -35,62 +35,54 @@ export default function ScanPage() {
         const startScanner = async () => {
             if (!videoRef.current) return;
 
-            await new Promise((r) => setTimeout(r, 300));
+            // Wait a bit to ensure DOM elements are fully rendered
+            await new Promise((r) => setTimeout(r, 500));
             if (!active) return;
 
-            if (!window.isSecureContext) {
+            if (!window.isSecureContext && window.location.hostname !== "localhost") {
                 setCameraError(
-                    "Kamera hanya bisa diakses melalui HTTPS atau localhost. Akses halaman ini melalui https:// untuk menggunakan kamera."
+                    "Kamera hanya bisa diakses melalui HTTPS (atau localhost)."
                 );
                 return;
             }
 
             try {
-                // Request camera explicitly with optimal constraints for QR scanning
-                // We limit resolution so the QR detection doesn't choke on 4K frames
-                let stream: MediaStream;
-                try {
-                    stream = await navigator.mediaDevices.getUserMedia({
-                        video: {
-                            facingMode: { ideal: "environment" },
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 }
-                        },
-                    });
-                } catch (e) {
-                    // Fallback to simpler constraints if the advanced one fails
-                    stream = await navigator.mediaDevices.getUserMedia({
-                        video: { facingMode: "environment" }
-                    });
-                }
-
-                if (!active) {
-                    stream.getTracks().forEach(t => t.stop());
+                // List all video devices to find the back camera
+                const videoDevices = await BrowserQRCodeReader.listVideoInputDevices();
+                
+                if (videoDevices.length === 0) {
+                    setCameraError("Tidak ada kamera yang ditemukan pada perangkat ini.");
                     return;
                 }
 
-                const controls = await codeReader.decodeFromStream(
-                    stream,
+                // Try to find the back camera by label, otherwise fallback to first device
+                const backCamera = videoDevices.find(device => 
+                    /back|rear|environment/i.test(device.label)
+                ) || videoDevices[videoDevices.length - 1]; // Often the last one is the primary back camera
+
+                const deviceId = backCamera.deviceId;
+
+                // We use decodeFromVideoDevice instead of stream for internal ZXing management
+                const controls = await codeReader.decodeFromVideoDevice(
+                    deviceId,
                     videoRef.current,
                     (result, error, ctrls) => {
                         if (ctrls) {
                             controlsRef.current = ctrls;
                         }
 
-                        // Ignore Not Found errors as they just mean "no QR detected in this frame"
                         if (error && error.name !== 'NotFoundException') {
-                            console.warn("Scan error:", error);
+                            // Only warn if it's a real decoding error, not just "QR not found yet"
+                            if (error.name !== 'ChecksumException' && error.name !== 'FormatException') {
+                                console.debug("Scan status:", error.name);
+                            }
                         }
 
                         if (result && active) {
-                            // Stop scanning once we get a result
+                            // Found a QR!
                             active = false;
-                            if (controlsRef.current) {
-                                controlsRef.current.stop();
-                            } else {
-                                stream.getTracks().forEach(t => t.stop());
-                            }
-
+                            
+                            // Immediate UI feedback
                             setIsLoading(true);
 
                             const decodedText = result.getText();
@@ -100,23 +92,30 @@ export default function ScanPage() {
                                 parsedId = lacakMatch[1];
                             }
 
-                            // Call server action without blocking the synchronous callback
-                            getGuestBookByTrackingId(parsedId).then((guestData) => {
-                                setScanResult(guestData || { trackingId: parsedId });
-                                setIsScanning(false);
-                                setIsLoading(false);
-                                toast.success("QR Code buku tamu berhasil dipindai!");
+                            // Cleanup camera immediately
+                            if (controlsRef.current) {
+                                controlsRef.current.stop();
+                            }
 
-                                if (parsedId.startsWith("BWS-")) {
-                                    markGuestBookScanned(parsedId).catch(() => { });
-                                }
-                            }).catch(() => {
-                                // Default fallback if fetch fails
-                                setScanResult({ trackingId: parsedId });
-                                setIsScanning(false);
-                                setIsLoading(false);
-                                toast.success("QR Code terdeteksi, tetapi gagal mengambil data server.");
-                            });
+                            // Fetch data
+                            getGuestBookByTrackingId(parsedId)
+                                .then((guestData) => {
+                                    setScanResult(guestData || { trackingId: parsedId });
+                                    setIsScanning(false);
+                                    setIsLoading(false);
+                                    toast.success("QR Code berhasil dipindai!");
+
+                                    if (parsedId.startsWith("BWS-")) {
+                                        markGuestBookScanned(parsedId).catch(() => {});
+                                    }
+                                })
+                                .catch((err) => {
+                                    console.error("Fetch error:", err);
+                                    setScanResult({ trackingId: parsedId });
+                                    setIsScanning(false);
+                                    setIsLoading(false);
+                                    toast.success("QR terdeteksi, tetapi gagal sinkronisasi server.");
+                                });
                         }
                     }
                 );
@@ -125,12 +124,10 @@ export default function ScanPage() {
 
             } catch (err: any) {
                 if (active) {
-                    console.error("Camera error:", err);
+                    console.error("Camera access error:", err);
                     const msg = err?.name === "NotAllowedError" || err?.message?.includes("Permission denied")
-                        ? "Izin kamera ditolak. Buka pengaturan browser Anda dan izinkan akses kamera untuk situs ini."
-                        : err?.name === "NotFoundError" || err?.message?.includes("Requested device not found")
-                            ? "Kamera belakang tidak ditemukan atau tidak tersedia di perangkat ini."
-                            : "Gagal mengakses kamera. Pastikan Anda memberikan izin akses kamera dan menggunakan koneksi aman (HTTPS).";
+                        ? "Izin kamera ditolak. Berikan izin di pengaturan browser Anda."
+                        : "Gagal mengakses kamera. Pastikan browser mendukung kamera dan izin telah diberikan.";
                     setCameraError(msg);
                 }
             }
