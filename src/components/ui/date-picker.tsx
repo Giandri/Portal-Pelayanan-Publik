@@ -32,7 +32,7 @@ export function DatePicker({
                 <Button
                     variant={"outline"}
                     className={cn(
-                        "w-full justify-start text-left font-normal h-11 px-4 rounded-lg border border-border bg-white text-foreground",
+                        "w-full justify-start text-left font-normal hover:bg-yellow-400/60 h-11 px-4 rounded-lg border border-border bg-white text-foreground",
                         !date && "text-muted-foreground",
                         className
                     )}
@@ -50,7 +50,7 @@ export function DatePicker({
                 />
                 <div className="p-3 border-t border-border">
                     <Button
-                        variant="ghost"
+                        variant="outline"
                         className="w-full justify-center text-xs h-8 font-medium"
                         onClick={() => setDate(new Date())}
                     >

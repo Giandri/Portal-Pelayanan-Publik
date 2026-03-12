@@ -130,7 +130,7 @@ export default function GuestBookPage() {
                                 <div className="flex items-center justify-between relative">
                                     <div className="absolute left-0 md:top-1/3 top-1/2 -translate-y-1/2 w-full h-1 bg-gray-200 rounded-full z-0">
                                         <motion.div
-                                            className="h-full bg-blue-600 rounded-full"
+                                            className="h-full bg-blue-950 rounded-full"
                                             initial={{ width: "0%" }}
                                             animate={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
                                             transition={{ duration: 0.3 }}
@@ -146,9 +146,9 @@ export default function GuestBookPage() {
                                             <div key={step.id} className="relative z-10 flex flex-col items-center gap-2  px-2 sm:px-4">
                                                 <motion.div
                                                     className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center border-2 transition-colors duration-300 ${isActive
-                                                        ? "border-blue-600 bg-blue-600 text-white"
+                                                        ? "border-yellow-400 bg-yellow-400 text-blue-950 "
                                                         : isCompleted
-                                                            ? "border-blue-600 bg-white text-blue-600"
+                                                            ? "border-blue-950  bg-yellow-400 text-blue-950"
                                                             : "border-gray-300 bg-white text-gray-400"
                                                         }`}
                                                     animate={{
@@ -552,7 +552,7 @@ export default function GuestBookPage() {
                                     {currentStep === 1 ? (
                                         <Button
                                             onClick={handleNext}
-                                            className="h-11 px-6 shadow-sm bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                                            className="h-11 px-6 shadow-sm bg-yellow-400 hover:bg-yellow-500 text-blue-950 font-medium"
                                         >
                                             Mulai Isi Form
                                             <ChevronRight className="w-4 h-4 ml-2" />
@@ -560,7 +560,7 @@ export default function GuestBookPage() {
                                     ) : (
                                         <Button
                                             onClick={handleSubmit}
-                                            className="h-11 px-6 shadow-sm bg-yellow-500 hover:bg-yellow-400 text-white font-medium"
+                                            className="h-11 px-6 shadow-sm bg-yellow-400 hover:bg-yellow-500 text-blue-950  font-medium"
                                             disabled={isSubmitting || !formData.name || !formData.email || !formData.nik || !agencyCategory || !formData.phone || !formData.subject}
                                         >
                                             <Send className="w-4 h-4 mr-2" />

@@ -7,21 +7,18 @@ import { toast } from "sonner";
 import { FileText, Droplets, CloudRain, Send, CheckCircle, Building2, Landmark, User, GraduationCap, UserCheck, Map, Leaf, FilePlus, Upload, Camera, ImageIcon, X, Paperclip, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useUploadThing } from "@/lib/uploadthing";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RichSelect } from "@/components/ui/rich-select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Dropzone, DropzoneContent, DropzoneEmptyState } from "@/components/kibo-ui/dropzone";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AgencyGridSelector } from "@/components/tracking/AgencyGridSelector";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { permitTypes } from "@/lib/constants";
-import { generateTrackingId } from "@/lib/utils";
 import { CopyButton } from "@/components/animate-ui/components/buttons/copy";
-import { cn } from "@/lib/utils";
+
 
 
 
@@ -239,9 +236,9 @@ export default function LayananPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="text-center">
-                                <h1 className="text-xl md:text-2xl font-bold text-black mb-1 drop-shadow-sm">Formulir Pengajuan</h1>
+                                <h1 className="text-xl md:text-2xl font-bold text-black mb-1 drop-shadow-sm">Formulir Permohonan Data</h1>
                                 <p className="text-gray-800 text-sm max-w-xl mx-auto font-medium">
-                                    Silakan isi formulir pengajuan di bawah ini.
+                                    Silakan isi formulir permohonan data di bawah ini.
                                 </p>
                             </CardTitle>
                         </CardHeader>
@@ -249,9 +246,9 @@ export default function LayananPage() {
 
                             {/* Permit Type Selection */}
                             <RichSelect
-                                label="Jenis Pengajuan"
+                                label="Jenis Permohonan Data"
                                 customDropdown
-                                placeholder="Pilih Jenis Pengajuan"
+                                placeholder="Pilih Jenis Permohonan Data"
                                 value={selectedType}
                                 onValueChange={(val) => setSelectedType(val)}
                                 options={permitTypes.map((p) => ({
@@ -271,7 +268,7 @@ export default function LayananPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-700">Nama Lengkap</label>
+                                    <label className="text-sm font-medium text-gray-700">Nama Lengkap<span className="text-red-500">*</span></label>
                                     <Input
                                         name="name"
                                         placeholder="Nama Lengkap"
@@ -281,7 +278,7 @@ export default function LayananPage() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-gray-700">Email</label>
+                                    <label className="text-sm font-medium text-gray-700">Email<span className="text-red-500">*</span></label>
                                     <Input
                                         name="email"
                                         type="email"
@@ -296,7 +293,7 @@ export default function LayananPage() {
 
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">NIK</label>
+                                <label className="text-sm font-medium text-gray-700">NIK<span className="text-red-500">*</span></label>
                                 <Input
                                     name="nik"
                                     placeholder="NIK KTP"
@@ -308,7 +305,7 @@ export default function LayananPage() {
 
                             {/* Agency Category Selection */}
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">Kategori Instansi / Pemohon</label>
+                                <label className="text-sm font-medium text-gray-700">Kategori Instansi / Pemohon<span className="text-red-500">*</span></label>
                                 <RichSelect
                                     className="h-11"
                                     customDropdown
@@ -355,7 +352,7 @@ export default function LayananPage() {
                             />
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">Nomor Telepon</label>
+                                <label className="text-sm font-medium text-gray-700">Nomor Telepon<span className="text-red-500">*</span></label>
                                 <Input
                                     name="phone"
                                     type="tel"
@@ -367,7 +364,7 @@ export default function LayananPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">Perihal</label>
+                                <label className="text-sm font-medium text-gray-700">Perihal<span className="text-red-500">*</span></label>
                                 <Input
                                     name="subject"
                                     placeholder="Perihal Permohonan"
@@ -378,7 +375,7 @@ export default function LayananPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">Tanggal Pengajuan</label>
+                                <label className="text-sm font-medium text-gray-700">Tanggal Pengajuan<span className="text-red-500">*</span></label>
                                 <DatePicker
                                     date={formData.date ? new Date(formData.date) : undefined}
                                     setDate={(date) => {
@@ -392,7 +389,7 @@ export default function LayananPage() {
 
                             {/* KTP Photo Upload */}
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">Foto KTP</label>
+                                <label className="text-sm font-medium text-gray-700">Foto KTP<span className="text-red-500">*</span></label>
                                 {ktpPreview ? (
                                     <div className="relative rounded-lg border-2 border-dashed border-green-300 bg-green-50 p-3">
                                         <img
@@ -484,7 +481,7 @@ export default function LayananPage() {
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-sm font-medium text-gray-700">Surat Lampiran</label>
+                                <label className="text-sm font-medium text-gray-700">Surat Lampiran<span className="text-red-500">*</span></label>
                                 <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50/50 p-3">
                                     <div className="flex items-center justify-between gap-3">
                                         <div className="flex items-center gap-3">
@@ -562,7 +559,7 @@ export default function LayananPage() {
                             >
                                 {isSubmitting ? (
                                     <>
-                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                                        <div className="w-5 h-5 border-2 text-blue-950 border-white border-t-transparent rounded-full animate-spin mr-2" />
                                         Mengirim...
                                     </>
                                 ) : (
