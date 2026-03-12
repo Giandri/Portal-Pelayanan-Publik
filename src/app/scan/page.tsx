@@ -93,7 +93,7 @@ export default function ScanPage() {
                     deviceId,
                     {
                         fps: 10,
-                        aspectRatio: 1.777,
+                        aspectRatio: 1.0,
                         disableFlip: true,
                     },
                     (decodedText) => {
