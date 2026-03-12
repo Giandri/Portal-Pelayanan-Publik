@@ -92,8 +92,9 @@ export default function ScanPage() {
                 await html5QrCode.start(
                     deviceId,
                     {
-                        fps: 20,
+                        fps: 10,
                         aspectRatio: 1.777,
+                        disableFlip: true,
                     },
                     (decodedText) => {
                         if (active) {
@@ -223,7 +224,7 @@ export default function ScanPage() {
                     >
                         <div className="relative w-[70vw] h-[70vw] max-w-[280px] max-h-[280px] min-w-[200px] min-h-[200px] flex items-center justify-center">
                             {/* Mask Overlay - Made lighter to fix "Gelap" issue */}
-                            <div className="absolute inset-0 rounded-3xl overflow-hidden border border-white/20 shadow-[0_0_0_2000px_rgba(0,0,0,0.3)]">
+                            <div className="absolute inset-0 rounded-3xl overflow-hidden border border-white/20 shadow-[0_0_0_2000px_rgba(0,0,0,0.6)]">
                                 <div className="absolute top-0 left-0 w-10 h-10 border-t-[5px] border-l-[5px] border-yellow-400 rounded-tl-2xl" />
                                 <div className="absolute top-0 right-0 w-10 h-10 border-t-[5px] border-r-[5px] border-yellow-400 rounded-tr-2xl" />
                                 <div className="absolute bottom-0 left-0 w-10 h-10 border-b-[5px] border-l-[5px] border-yellow-400 rounded-bl-2xl" />
