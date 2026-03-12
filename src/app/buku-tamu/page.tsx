@@ -367,12 +367,6 @@ export default function GuestBookPage() {
                                                             style={{ height: "auto", maxWidth: "100%", width: "100%" }}
                                                             viewBox={`0 0 160 160`}
                                                         />
-                                                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
-                                                            <span className="flex items-center gap-1 text-[10px] text-gray-400 bg-white px-2 py-0.5 rounded-full border border-gray-100 shadow-sm">
-                                                                <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
-                                                                Menunggu scan petugas...
-                                                            </span>
-                                                        </div>
                                                     </motion.div>
                                                 )}
                                             </AnimatePresence>
