@@ -193,7 +193,7 @@ export default function ScanPage() {
             </div>
 
             {/* Header */}
-            <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScanning ? "bg-black/20 backdrop-blur-md border-b border-white/10" : "bg-white/70 backdrop-blur-md border-b border-yellow-200/70"} px-4 py-4 flex items-center shadow-sm`}>
+            <header className={`fixed top-0 left-0 right-0 z-[200] transition-all duration-500 ${isScanning ? "bg-black/20 backdrop-blur-md border-b border-white/10" : "bg-white/70 backdrop-blur-md border-b border-yellow-200/70"} px-4 py-4 flex items-center shadow-sm`}>
                 <Link
                     href="/admin-menu"
                     className={`p-2 -ml-2 rounded-full transition-colors mr-3 active:scale-95 ${isScanning ? "hover:bg-white/20 text-white" : "hover:bg-blue-50 text-blue-950"}`}
@@ -201,7 +201,7 @@ export default function ScanPage() {
                     <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <div className="flex-1">
-                    <h1 className={`text-sm font-extrabold tracking-widest uppercase ${isScanning ? "text-white" : "text-blue-950"}`}>Monitor Pindaian</h1>
+                    <h1 className={`text-sm font-extrabold tracking-widest uppercase ${isScanning ? "text-white" : "text-blue-950"}`}>Scan QR Code</h1>
                     <p className={`text-[10px] font-bold tracking-wider opacity-60 uppercase ${isScanning ? "text-white" : "text-blue-950"}`}>Verifikasi Tamu</p>
                 </div>
             </header>
@@ -247,7 +247,7 @@ export default function ScanPage() {
                             </div>
 
                             {!cameraError && (
-                                <div className="absolute -bottom-24 left-1/2 -translate-x-1/2 w-max text-center">
+                                <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-max text-center">
                                     <p className="text-white/60 text-[11px] font-medium bg-black/20 backdrop-blur-sm px-4 py-1 rounded-full border border-white/5 uppercase tracking-[0.15em]">
                                         Pusatkan QR dalam kotak
                                     </p>
@@ -259,7 +259,7 @@ export default function ScanPage() {
             </AnimatePresence>
 
             {/* Results Layer */}
-            <main className="flex-1 flex flex-col items-center justify-center p-4 relative z-[100]">
+            <main className="flex-1 flex flex-col items-center justify-center p-4 relative z-20">
                 <AnimatePresence mode="wait">
                     {isLoading && (
                         <motion.div
